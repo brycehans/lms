@@ -54,7 +54,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.set_booking_completion(p_booking_id uuid, p_is_complete boolean) from public;
+revoke execute on function public.set_booking_completion(p_booking_id uuid, p_is_complete boolean) from public, anon;
 
 grant execute on function public.set_booking_completion(p_booking_id uuid, p_is_complete boolean) to authenticated;
 

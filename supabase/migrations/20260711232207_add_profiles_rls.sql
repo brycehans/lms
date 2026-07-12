@@ -33,8 +33,5 @@ create policy users_can_see_booking_counterparties on profiles
         and profiles.id in (bk.student_id, bk.time_traveller_id)
         and bk.deleted_at is null));
 
-create policy self_update_profile on profiles
-  for update to authenticated
-  using (profiles.id = auth.uid())
-  with check (profiles.id = auth.uid());
-
+-- note: there is deliberately no update/insert/delete policy on profiles,
+-- since we only expose mutations via security definer rpc calls.

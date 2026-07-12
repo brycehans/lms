@@ -65,7 +65,7 @@ end;
 
 $$;
 
-revoke execute on function public.reschedule_booking(timestamptz, is_bookable_start_time) from public;
+revoke execute on function public.reschedule_booking(timestamptz, is_bookable_start_time) from public, anon;
 
 grant execute on function public.reschedule_booking(timestamptz, is_bookable_start_time) to authenticated;
 

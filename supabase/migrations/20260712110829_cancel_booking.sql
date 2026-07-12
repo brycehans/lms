@@ -39,7 +39,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.cancel_booking(timestamptz) from public;
+revoke execute on function public.cancel_booking(timestamptz) from public, anon;
 
 grant execute on function public.cancel_booking(timestamptz) to authenticated;
 
