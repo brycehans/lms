@@ -31,8 +31,17 @@ create table bookings (
   -- we can make the extra check work be done on cancelled lookups rather than
   -- where-not-null done in the common path
   starts_at timestamptz not null,
+  -- point-in-time snapshot of the student's name AT BOOKING TIME (frozen, like
+  -- university_id): the profile name can change later via the profile edit form,
+  -- but a booking records who it was made under when it was made.
+  student_first_name text not null,
+  student_last_name text not null,
   created_at timestamptz not null default now(),
   deleted_at timestamptz,
-  cancelled_at timestamptz
+  cancelled_at timestamptz,
+  -- null = not yet marked complete; a timestamp = when the student marked it done.
+  -- minted server-side by the completion RPC (like cancelled_at), toggled back to
+  -- null to un-complete. only completable once the session is in the past.
+  completed_at timestamptz
 );
 

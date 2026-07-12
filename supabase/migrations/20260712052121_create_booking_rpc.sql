@@ -72,6 +72,8 @@ declare
   enrolled_university uuid;
   new_booking_id uuid;
   assigned_traveller uuid;
+  student_first_name_snapshot text;
+  student_last_name_snapshot text;
 begin
   if p_starts_at < now() then
     raise exception 'bookings cannot be created in the past';
@@ -88,6 +90,16 @@ begin
   if private.is_person_busy(auth.uid(), p_starts_at) then
     raise exception 'student is already busy at % with another booking', p_starts_at;
   end if;
+  select
+    first_name,
+    last_name
+  into
+    student_first_name_snapshot,
+    student_last_name_snapshot
+  from
+    public.profiles
+  where
+    id = auth.uid();
   select
     university_id
   into
@@ -107,8 +119,8 @@ begin
     raise exception 'cannot create booking: there are no time travellers available to book with';
   end if;
   begin
-    insert into public.bookings(reason, student_id, time_traveller_id, starts_at, university_id)
-      values (p_reason, auth.uid(), assigned_traveller, p_starts_at, enrolled_university)
+    insert into public.bookings(reason, student_id, time_traveller_id, starts_at, university_id, student_first_name, student_last_name)
+      values (p_reason, auth.uid(), assigned_traveller, p_starts_at, enrolled_university, student_first_name_snapshot, student_last_name_snapshot)
     returning
       id
     into

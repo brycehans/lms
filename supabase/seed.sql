@@ -95,13 +95,16 @@ insert into student_enrolments (student_id, university_id)
 -- Week-anchored (not fixed dates) so upcoming/past states stay correct over time.
 -- Slots are chosen so no ACTIVE party is double-booked: Tim = next-Mon 9am & 2pm,
 -- Alice = next-Mon 9am & last-Wed 10am, Evan = last-Wed 10am & next-Mon 2pm.
-insert into bookings (student_id, time_traveller_id, reason, starts_at, cancelled_at, university_id)
+-- student_first_name/last_name are FROZEN snapshots of each student's profile
+-- name at booking time; here they match the profiles so "frozen == current"
+-- until a profile is edited (Tim Rollins, Evan Towers).
+insert into bookings (student_id, time_traveller_id, reason, starts_at, cancelled_at, completed_at, university_id, student_first_name, student_last_name)
   values -- Tim (UTS) + Alice, upcoming: next Mon 9am
-  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'final exam for HLTN1001', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 9 hours') at time zone 'Australia/Melbourne', null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'final exam for HLTN1001', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 9 hours') at time zone 'Australia/Melbourne', null, null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Tim', 'Rollins'),
   -- Tim (UTS) + Alice, cancelled: was next Tue 1pm, cancelled yesterday
-  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'final exam for HLTN1001', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 1 day 13 hours') at time zone 'Australia/Melbourne', now() - interval '1 day', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  -- Evan (USyd, student) + Alice, completed: last Wed 10am
-  ('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', 'prac for Jazz 201', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '2 days 10 hours') at time zone 'Australia/Melbourne', null, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'final exam for HLTN1001', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 1 day 13 hours') at time zone 'Australia/Melbourne', now() - interval '1 day', null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Tim', 'Rollins'),
+  -- Evan (USyd, student) + Alice, completed: last Wed 10am, marked done an hour after it started
+  ('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', 'prac for Jazz 201', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '2 days 10 hours') at time zone 'Australia/Melbourne', null, (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '2 days 11 hours') at time zone 'Australia/Melbourne', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Evan', 'Towers'),
   -- Tim (UTS, student) + Evan (traveller), upcoming: next Mon 2pm
-  ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Summative exam for CS2003', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 14 hours') at time zone 'Australia/Melbourne', null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Summative exam for CS2003', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 14 hours') at time zone 'Australia/Melbourne', null, null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Tim', 'Rollins');
 
