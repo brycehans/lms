@@ -1,0 +1,11 @@
+{
+  "[sql]": {
+    "editor.defaultFormatter": "bradymholt.pgformatter",
+    "editor.formatOnSave": true
+  },
+  "pgFormatter.pgFormatterPath": "/opt/homebrew/bin/pg_format",
+  "pgFormatter.spaces": 2,
+  "pgFormatter.keywordCase": 1,
+  "pgFormatter.functionCase": 1,
+  "pgFormatter.typeCase": 1
+}
