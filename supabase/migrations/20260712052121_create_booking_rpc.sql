@@ -64,6 +64,7 @@ create domain is_bookable_start_time as business_hours check (extract(ISODOW fro
 create function public.create_booking(p_starts_at is_bookable_start_time, p_reason text)
   returns uuid -- the newly created booking's id
   security definer
+  set timezone = 'Australia/Melbourne'
   set search_path = ''
   language plpgsql
   as $$
