@@ -1,0 +1,4 @@
+allowBuilds:
+  bun: false
+  sharp: true
+  unrs-resolver: true
