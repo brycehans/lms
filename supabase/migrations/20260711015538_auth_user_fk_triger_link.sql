@@ -6,7 +6,15 @@ alter table profiles
   alter column id drop default,
   add constraint profiles_id_fkey foreign key (id) references auth.users (id) on delete cascade;
 
-create function public.handle_new_user ()
+create schema if not exists private;
+
+-- `authenticated` must be able to REFERENCE objects in `private` so the RLS
+-- helpers (invoked in the caller's context, e.g. admin_university_ids) resolve.
+-- `private` is NOT in PostgREST's exposed schemas, so nothing here gets a REST
+-- endpoint regardless of this grant.
+grant usage on schema private to authenticated;
+
+create function private.handle_new_user ()
   returns trigger
   security definer
   set search_path = ''
@@ -21,5 +29,5 @@ language plpgsql;
 
 create trigger on_auth_user_created
   after insert on auth.users for each row
-  execute function public.handle_new_user ();
+  execute function private.handle_new_user ();
 

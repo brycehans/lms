@@ -18,6 +18,8 @@ delete from user_roles;
 
 delete from university_administrations;
 
+delete from student_enrolments;
+
 delete from universities;
 
 delete from auth.users;
@@ -68,17 +70,38 @@ insert into university_administrations (user_id, university_id)
 
 -- Kerry -> UTS
 --------------------------------------------------------------------------------
+-- Student enrolments (one uni per student). These MUST match the frozen
+-- university_id on each student's bookings below, so RPC-created bookings land
+-- in the same uni as the seeded history: Tim = UTS, Evan-as-student = USyd.
+-- (Alice/Kerry/Bryce are not students, so no enrolment rows.)
+insert into student_enrolments (student_id, university_id)
+  values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  -- Tim -> UTS
+  ('33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+
+-- Evan -> USyd
+--------------------------------------------------------------------------------
 -- Bookings, covering upcoming / completed / cancelled states.
 -- university_id is FROZEN from the student's nominal enrollment at creation
 -- (denormalized, not joined-through): Tim = UTS, Evan-as-student = USyd.
 -- Split is 3 UTS / 1 USyd so Kerry (UTS admin) must see 3 and be blind to 1.
+--
+-- starts_at must be a REAL slot (top-of-hour, 9am-4pm, Mon-Fri) so it matches
+-- the create_booking domain rules. We build each slot in Melbourne WALL-CLOCK
+-- and convert back to an instant:
+--   date_trunc('week', now() at time zone 'Australia/Melbourne')  -> Monday 00:00 local
+--   + interval offsets                                            -> the local slot
+--   at time zone 'Australia/Melbourne'                            -> back to timestamptz
+-- Week-anchored (not fixed dates) so upcoming/past states stay correct over time.
+-- Slots are chosen so no ACTIVE party is double-booked: Tim = next-Mon 9am & 2pm,
+-- Alice = next-Mon 9am & last-Wed 10am, Evan = last-Wed 10am & next-Mon 2pm.
 insert into bookings (student_id, time_traveller_id, reason, starts_at, cancelled_at, university_id)
-  values -- Tim (UTS) + Alice, upcoming
-  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'final exam for HLTN1001', now() + interval '1 day', null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  -- Tim (UTS) + Alice, cancelled (was scheduled for today)
-  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'final exam for HLTN1001', date_trunc('day', now()), now() - interval '1 day', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-  -- Evan (USyd, student) + Alice, completed in the past
-  ('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', 'prac for Jazz 201', now() - interval '3 days', null, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
-  -- Tim (UTS, student) + Evan (traveller), upcoming
-  ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Summative exam for CS2003', now() + interval '4 days', null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  values -- Tim (UTS) + Alice, upcoming: next Mon 9am
+  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'final exam for HLTN1001', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 9 hours') at time zone 'Australia/Melbourne', null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  -- Tim (UTS) + Alice, cancelled: was next Tue 1pm, cancelled yesterday
+  ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'final exam for HLTN1001', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 1 day 13 hours') at time zone 'Australia/Melbourne', now() - interval '1 day', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  -- Evan (USyd, student) + Alice, completed: last Wed 10am
+  ('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', 'prac for Jazz 201', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '2 days 10 hours') at time zone 'Australia/Melbourne', null, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+  -- Tim (UTS, student) + Evan (traveller), upcoming: next Mon 2pm
+  ('11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'Summative exam for CS2003', (date_trunc('week', now() at time zone 'Australia/Melbourne') + interval '1 week 14 hours') at time zone 'Australia/Melbourne', null, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
 

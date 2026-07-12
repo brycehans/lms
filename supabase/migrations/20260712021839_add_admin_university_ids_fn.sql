@@ -1,4 +1,4 @@
-create function public.is_current_user_superadmin ()
+create function private.is_current_user_superadmin ()
   returns boolean
   security definer stable
   set search_path = ''
@@ -16,7 +16,7 @@ $$
 language sql;
 
 -- which universities does the current user have admin reach over?
-create function public.admin_university_ids ()
+create function private.admin_university_ids ()
   returns setof uuid
   security definer stable
   set search_path = ''
@@ -33,7 +33,7 @@ create function public.admin_university_ids ()
   from
     public.universities
   where
-    public.is_current_user_superadmin ()
+    private.is_current_user_superadmin ()
     and public.universities.deleted_at is null;
 $$
 language sql;
