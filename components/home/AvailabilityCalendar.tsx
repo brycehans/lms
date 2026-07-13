@@ -68,7 +68,8 @@ type Status = "loading" | "ok" | "error";
 export function AvailabilityCalendar() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [status, setStatus] = useState<Status>("loading");
-  const [avail, setAvail] = useState<Set<string>>(new Set());
+  // slot-key → the exact ISO instant the RPC returned for that slot.
+  const [avail, setAvail] = useState<Map<string, string>>(new Map());
 
   // Melbourne "today" as a UTC-midnight anchor, so day arithmetic is DST-free.
   const [ty, tm, td] = melbDate.format(new Date()).split("-").map(Number);
@@ -109,13 +110,15 @@ export function AvailabilityCalendar() {
         if (cancelled) return;
         if (error || !data) {
           setStatus("error");
-          setAvail(new Set());
+          setAvail(new Map());
           return;
         }
-        // setof timestamptz → a bare array of ISO strings.
-        const slots = new Set<string>();
+        // setof timestamptz → a bare array of ISO strings. Keep the ISO instant
+        // against each slot key so the "Open" link can pass an unambiguous
+        // absolute timestamp (no wall-clock → instant reconstruction / DST math).
+        const slots = new Map<string, string>();
         for (const iso of data as string[]) {
-          slots.add(keyForInstant(iso));
+          slots.set(keyForInstant(iso), iso);
         }
         setAvail(slots);
         setStatus("ok");
@@ -132,7 +135,7 @@ export function AvailabilityCalendar() {
     <section className="space-y-4 hash-target" id="availability-calendar">
       <SectionHeading
         icon={CalendarDays}
-        title="Upcoming availability"
+        title="Upcoming consultations"
         action={
           <div className="flex items-center gap-2">
             <span className="hidden text-sm text-muted-foreground sm:inline">
@@ -158,6 +161,10 @@ export function AvailabilityCalendar() {
           </div>
         }
       />
+      <p className="text-sm text-muted-foreground">
+        Our time travellers are available to meet with the present version of
+        you Monday to Friday, 9am to 4pm.
+      </p>
 
       {status === "error" && (
         <p className="text-sm text-muted-foreground">
@@ -211,7 +218,7 @@ function Row({
 }: {
   hour: number;
   columns: { ymd: string; isWeekday: boolean }[];
-  avail: Set<string>;
+  avail: Map<string, string>;
   status: Status;
   todayYmd: string;
   nowHour: number;
@@ -227,17 +234,18 @@ function Row({
         const key = slotKey(c.ymd, hour);
         const isPast =
           c.ymd < todayYmd || (c.ymd === todayYmd && hour <= nowHour);
-        const free = avail.has(key);
+        // The exact ISO instant for this slot, or undefined if not bookable.
+        const startAt = avail.get(key);
 
         let cell;
         if (!c.isWeekday || isPast) {
           cell = <span className="text-muted-foreground/40">—</span>;
         } else if (status !== "ok") {
           cell = <span className="text-muted-foreground/40">·</span>;
-        } else if (free) {
+        } else if (startAt) {
           cell = (
             <Link
-              href="/book"
+              href={`/book?start_at=${encodeURIComponent(startAt)}`}
               className="block rounded-md bg-emerald-500/10 py-1 text-sm font-medium text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400"
             >
               Open
