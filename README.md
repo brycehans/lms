@@ -63,7 +63,7 @@ logins for each persona.
 > with that time already selected. Follow one while signed out and the slot isn't
 > lost: it round-trips through the login page as a `next` parameter (see
 > `safeNext` + the login form), so after signing in you land back on that exact
-> deep-link with your slot still chosen. The slot is only a *prefill* — the time
+> deep-link with your slot still chosen. The slot is only a _prefill_ — the time
 > the student actually confirms is what `create_booking` validates and snapshots.
 
 ![The public roster of time travellers](./docs/images/traveller-roster.png)
@@ -110,34 +110,9 @@ rehydrates from scratch. It prompts before deleting; `--dry-run` previews,
 > email form — one button per seeded persona (student, student+traveller,
 > traveller, two scoped admins, and a superadmin). Each button runs a **real**
 > Supabase sign-in (no impersonation backdoor), so sessions, cookies, and RLS
-> behave exactly as a normal login. The accounts are deterministic throwaway
-> `@example.com` users from `supabase/seed.sql`; on the hosted demo the whole
-> panel sits behind an HTTP Basic Auth gate. Pick a persona and you're in.
+> behave exactly as a normal login.
 
 ![The sign-in page's one-click quick-login panel, one button per seeded persona](./docs/images/quick-login.png)
-
-> [!NOTE]
-> The quick-login password is env-driven and defaults to `localdev` on both
-> sides with zero config — `pnpm dev` injects `NEXT_PUBLIC_DEMO_PASSWORD=localdev`
-> and `seed.sql` hashes the same fallback. If you set a **custom**
-> `NEXT_PUBLIC_DEMO_PASSWORD` in `.env.local`, you must seed the DB with the
-> matching value (`PGOPTIONS="-c app.demo_password=<pw>"`), because a plain
-> `supabase db reset` always reseeds with `localdev` and would desync from your
-> override — sign-in then fails with `invalid_credentials`.
-
-> **Port conflicts.** The Next server runs on a fixed, uncommon port (`1955`) so
-> it matches the auth redirect allow-list in `supabase/config.toml` and rarely
-> clashes on a fresh machine. If `1955` _is_ taken, override it with
-> `pnpm dev -p <port>` (or `PORT=<port> pnpm dev`); update `site_url` /
-> `additional_redirect_urls` in `config.toml` to match only if you exercise auth
-> email/OAuth redirects. The Supabase stack binds the fixed ports in
-> `config.toml` (`54321` API, `54322` db, `54323` studio, plus
-> `54320`/`54324`/`54329`) and fails if one is taken. To relocate the stack,
-> change the port in `config.toml` **only** — `pnpm dev` reads whatever the
-> running stack reports, so nothing else needs editing.
-
-> **Local dev:** use Chrome. Firefox hits an upstream Next 16.2.10 dev-only reload
-> loop on pages with dynamic content (e.g. `/me`); see the note in `CLAUDE.md`.
 
 ### Useful commands
 
@@ -243,13 +218,13 @@ Spots where a deliberate call was made and the road-not-taken is worth a
 conversation. Each is marked with a `TRADEOFF OPPORTUNITY` comment in the source
 (`grep -rn "TRADEOFF OPPORTUNITY"`) so reviewers can jump straight to them:
 
-- **Read via an RLS policy, not an RPC.** A student reads their *own* enrolment
+- **Read via an RLS policy, not an RPC.** A student reads their _own_ enrolment
   row through a plain `select` RLS policy rather than a `SECURITY DEFINER` RPC.
   RPCs are reserved for reading rows you aren't party to; your own row is fine to
   expose directly — the read/write split in action.
   (`supabase/migrations/20260713022258_read_own_enrolment.sql:1`)
 - **Idempotent cancellation.** `cancel_booking` just (re)stamps `cancelled_at`,
-  so cancelling twice is harmless — but the *first* cancellation time isn't
+  so cancelling twice is harmless — but the _first_ cancellation time isn't
   preserved. The RPC is `SECURITY DEFINER` precisely so only `cancelled_at` can
   change; a table-level write policy would let PostgREST expose every column.
   (`supabase/migrations/20260712110829_cancel_booking.sql:3`)
