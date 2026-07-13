@@ -26,6 +26,14 @@ the config a clone needs.
 The landing page has one-click demo logins for each persona (student, traveller,
 admin, superadmin), seeded deterministically by `supabase/seed.sql`.
 
+> **Port conflicts.** The Next server (`3000`) is port-agnostic — if it's taken,
+> `next dev` picks the next free port automatically and the app is unaffected
+> (all its API calls are relative). The Supabase stack is *not*: `supabase start`
+> binds the fixed ports in `supabase/config.toml` (`54321` API, `54322` db,
+> `54323` studio, plus `54320`/`54324`/`54329`) and fails if one is taken. To
+> relocate, change the port in `config.toml` **and**, for the API port, the
+> matching `NEXT_PUBLIC_SUPABASE_URL` in `.env.local` (the two must agree).
+
 > **Local dev:** use Chrome. Firefox hits an upstream Next 16.2.10 dev-only reload
 > loop on pages with dynamic content (e.g. `/me`); see the note in `CLAUDE.md`.
 
