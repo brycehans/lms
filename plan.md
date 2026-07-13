@@ -102,3 +102,29 @@ busy (another being free) or the student was already booked. Fix: new
 reschedule_booking's checks exactly (migration
 `20260713163529_list_reschedule_slots.sql`); `components/me/StudentBookings.tsx`
 now calls it.
+
+## Signup trust boundary — where validation actually binds
+
+`app/api/auth/signup/route.ts` validates the chosen `university_id` (must name a
+real, non-deleted university) before calling `auth.signUp`. Be explicit in the
+interview that this route-level check is UX + defense-in-depth, NOT the security
+boundary: `auth.signUp` is reachable directly with the public anon key, so a
+client can bypass the route entirely and craft its own `raw_user_meta_data`.
+
+The real boundary is the `handle_new_user` trigger (SECURITY DEFINER,
+`20260713172000_signup_enrolment_and_role.sql`):
+
+- the role is HARDCODED to `'student'` — the trigger never reads a role out of
+  client metadata, so signup cannot self-promote. (This is the "roles live
+  outside `profiles` so nobody can self-elevate" invariant paying off once more —
+  same reason the profile self-update policy is safe.)
+- `university_id` is tenancy data, not a privilege, and is FK-constrained to a
+  real university.
+
+So the worst a direct (route-bypassing) signup can do is enrol itself as a
+student at a real uni — exactly what the happy path does; no privilege is gained.
+
+One residual gap, consciously accepted: a direct call could enrol against a
+SOFT-DELETED university (the route blocks that via the `deleted_at is null` RLS
+filter; the trigger's FK only checks existence, not liveness). Fine for a toy —
+the fix, if uni lifecycle ever matters, is a liveness check inside the trigger.
