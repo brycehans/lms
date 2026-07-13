@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,9 +11,18 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
+
+type University = { id: string; name: string };
 
 type SignUpFormValues = {
   email: string;
@@ -22,15 +30,18 @@ type SignUpFormValues = {
   repeatPassword: string;
   firstName: string;
   lastName: string;
+  universityId: string;
 };
 
 export function SignUpForm({
+  universities,
   className,
   ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+}: React.ComponentPropsWithoutRef<"div"> & { universities: University[] }) {
   const router = useRouter();
   const {
     register,
+    control,
     handleSubmit,
     getValues,
     setError,
@@ -42,23 +53,26 @@ export function SignUpForm({
     password,
     firstName,
     lastName,
+    universityId,
   }: SignUpFormValues) => {
-    const supabase = createClient();
-
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
-          data: {
-            firstName,
-            lastName,
-          },
-        },
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          firstName,
+          lastName,
+          universityId,
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const { error } = await response.json();
+        throw new Error(error ?? "An error occurred");
+      }
+
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
       setError("root", {
@@ -135,6 +149,30 @@ export function SignUpForm({
                   id="last-name"
                   type="text"
                   {...register("lastName", { required: true })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center">
+                  <Label htmlFor="university">University</Label>
+                </div>
+                <Controller
+                  name="universityId"
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="university" className="w-full">
+                        <SelectValue placeholder="Select your university" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {universities.map((university) => (
+                          <SelectItem key={university.id} value={university.id}>
+                            {university.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
               </div>
               {errors.root && (
