@@ -2,18 +2,11 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { hasEnvVars } from "../utils";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
-
-  // If the env vars are not set, skip proxy check. You can remove this
-  // once you setup the project.
-  if (!hasEnvVars) {
-    return supabaseResponse;
-  }
 
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.
@@ -44,22 +37,19 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  // IMPORTANT: If you remove getClaims() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
-
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
-  }
+  // This call is the whole point of the proxy: reads happen in Server
+  // Components, which cannot write cookies, so a read-only request path has no
+  // cookie-writable context to refresh an expired token. Running getClaims()
+  // here on every request refreshes the session and writes the new cookies onto
+  // the response (via setAll above). Remove it and sessions silently expire
+  // after jwt_expiry (1h) during read-only browsing.
+  //
+  // We deliberately do NOT redirect unauthenticated requests. RLS is the real
+  // gate on reads, so a path-prefix allowlist here would be redundant with it
+  // and hostile to /api/** fetch calls (which would get a 307 to an HTML page,
+  // silently breaking signup/login). Pages that are genuinely logged-in-only
+  // enforce that with their own getClaims()/redirect check, next to the page.
+  await supabase.auth.getClaims();
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
