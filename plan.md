@@ -111,20 +111,22 @@ interview that this route-level check is UX + defense-in-depth, NOT the security
 boundary: `auth.signUp` is reachable directly with the public anon key, so a
 client can bypass the route entirely and craft its own `raw_user_meta_data`.
 
-The real boundary is the `handle_new_user` trigger (SECURITY DEFINER,
-`20260713172000_signup_enrolment_and_role.sql`):
+The real boundary is the `handle_new_user` trigger (SECURITY DEFINER). It was
+introduced in `20260713172000_signup_enrolment_and_role.sql` and hardened in
+`20260713190200_harden_signup_trigger.sql`:
 
 - the role is HARDCODED to `'student'` — the trigger never reads a role out of
   client metadata, so signup cannot self-promote. (This is the "roles live
   outside `profiles` so nobody can self-elevate" invariant paying off once more —
   same reason the profile self-update policy is safe.)
-- `university_id` is tenancy data, not a privilege, and is FK-constrained to a
-  real university.
+- `university_id` is tenancy data, not a privilege. The trigger re-checks that it
+  names a LIVE university (`deleted_at is null`) rather than trusting the FK,
+  which only proves existence. The boundary can't lean on the route's
+  RLS-scoped alive-check, since a direct signup bypasses the route entirely.
+- names are required: a direct signup omitting `first_name`/`last_name` is
+  rejected with a clear error, rather than incidentally tripping the `profiles`
+  NOT NULL constraint (opaque GoTrue "Database error saving new user").
 
 So the worst a direct (route-bypassing) signup can do is enrol itself as a
-student at a real uni — exactly what the happy path does; no privilege is gained.
-
-One residual gap, consciously accepted: a direct call could enrol against a
-SOFT-DELETED university (the route blocks that via the `deleted_at is null` RLS
-filter; the trigger's FK only checks existence, not liveness). Fine for a toy —
-the fix, if uni lifecycle ever matters, is a liveness check inside the trigger.
+student at a real, LIVE uni — exactly what the happy path does; no privilege is
+gained, and no soft-deleted tenancy can be joined.
