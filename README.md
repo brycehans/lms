@@ -214,6 +214,28 @@ Booking slots are enforced at the **type level** by custom domains:
 traveller, takes a `pg_advisory_xact_lock` on the slot to close a both-roles
 double-booking race, and enforces "can't be in two places at once".
 
+## Design tradeoffs (flagged in code)
+
+Spots where a deliberate call was made and the road-not-taken is worth a
+conversation. Each is marked with a `TRADEOFF OPPORTUNITY` comment in the source
+(`grep -rn "TRADEOFF OPPORTUNITY"`) so reviewers can jump straight to them:
+
+- **Read via an RLS policy, not an RPC.** A student reads their *own* enrolment
+  row through a plain `select` RLS policy rather than a `SECURITY DEFINER` RPC.
+  RPCs are reserved for reading rows you aren't party to; your own row is fine to
+  expose directly — the read/write split in action.
+  (`supabase/migrations/20260713022258_read_own_enrolment.sql:1`)
+- **Idempotent cancellation.** `cancel_booking` just (re)stamps `cancelled_at`,
+  so cancelling twice is harmless — but the *first* cancellation time isn't
+  preserved. The RPC is `SECURITY DEFINER` precisely so only `cancelled_at` can
+  change; a table-level write policy would let PostgREST expose every column.
+  (`supabase/migrations/20260712110829_cancel_booking.sql:3`)
+- **Greeting from the JWT, not the DB.** With email confirmation off, signup
+  leaves the user logged in and the name they entered rides in the JWT's
+  `user_metadata`, so the success page greets them with no DB round-trip — at the
+  cost of a slightly awkward claims lookup on the front end.
+  (`app/auth/sign-up-success/page.tsx:26`)
+
 ## Known limitations (by design, for this take-home)
 
 - **Hardcoded business timezone.** `Australia/Melbourne` is baked into the
