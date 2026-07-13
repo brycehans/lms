@@ -1,12 +1,62 @@
-# Course Prophecies
+# 🔮 Course Prophecies
 
-A mini-LMS where students book 1-hour consultations with "time travellers" who
-prophesy their grades. Built on Next.js (App Router) + Supabase (Postgres 17),
-running locally in Docker.
+**Course Prophecies** is a
+mini-LMS with a twist: instead of tutors, students book one-hour consultations
+with **certified time travellers** who go into the future to find out your grade
+then come back to the present and tell you how you scored.
 
-The interesting part is the **security model**, not the fortune-telling: this is
-a deliberately server-mediated Supabase app (not the default client-writes
-pattern), and the whole design turns on one rule — see [Architecture](#architecture).
+It happens in three steps:
+
+1. **Book a consultation.** Pick an open slot and hand over your course details.
+2. **They travel to the future.** A traveller slips through a swirling green
+   portal to the day your exam results go up.
+3. **They report back.** They return with the prophecy — your grade, revealed.
+
+It's a real multi-tenant scheduling app: four personas,
+role-scoped views, a full booking lifecycle, and an engine that refuses to
+double-book any traveller across space _or_ time. Built on Next.js (App Router) +
+local Supabase (Postgres 17) in Docker — and yes, the dev server runs on port
+**1955** on purpose.
+
+![We're going back to 1955](./docs/images/localhost-1955.jpeg)
+
+## What it does
+
+![How it works — book a consultation, they travel to the future, they report back](./docs/images/how-it-works.png)
+
+- **Students** consult the emerald availability calendar, book a session into a
+  valid business-hours slot, and manage it afterwards — reschedule, cancel, or
+  mark a prophecy fulfilled. Each booking auto-assigns a free traveller.
+
+  ![A student's account page: profile editor and their own bookings with reschedule/cancel actions](./docs/images/student-me.png)
+
+- **Travellers** (some students moonlight as one) see the sessions foretold to
+  them.
+
+  ![A traveller's account page: the sessions auto-assigned to them, read-only](./docs/images/traveller-me.png)
+
+- **Admins** watch over the consultations at the universities they administer;
+  **superadmins** see every timeline. Both views are read-only and scoped by RLS.
+
+  ![An admin's account page: bookings across the universities they administer, read-only](./docs/images/admin-me.png)
+
+- **Everyone** gets the usual auth surface: sign-up (which captures name +
+  university and enrols the user as a student in one step), login, password
+  reset, and a self-service profile edit.
+
+The public landing page doubles as a directory — the traveller roster, the
+participating universities, and the week's open slots — with one-click demo
+logins for each persona.
+
+![The weekly availability calendar: open vs full one-hour slots, Mon–Fri 9am–4pm](./docs/images/availability-calendar.png)
+
+![The public roster of time travellers](./docs/images/traveller-roster.png)
+
+## Security Model
+
+This is a deliberately server-mediated Supabase app (not the
+default client-writes pattern), and the whole design turns on one rule — see
+[Architecture](#architecture).
 
 ## Quick start
 
@@ -30,19 +80,39 @@ stack's URL + publishable key live and defaults the demo-login flags. Copy
 `.env.example` to `.env.local` only to override something (e.g. to point the local
 app at a hosted Supabase).
 
-- App: [localhost:3000](http://localhost:3000)
+- App: [localhost:1955](http://localhost:1955)
 - Supabase Studio: [localhost:54323](http://localhost:54323) · API on `:54321` · db on `:54322`
 
-The landing page has one-click demo logins for each persona (student, traveller,
-admin, superadmin), seeded deterministically by `supabase/seed.sql`.
+> [!TIP]
+> **Quick-login (demo).** The sign-in page shows a one-click panel above the
+> email form — one button per seeded persona (student, student+traveller,
+> traveller, two scoped admins, and a superadmin). Each button runs a **real**
+> Supabase sign-in (no impersonation backdoor), so sessions, cookies, and RLS
+> behave exactly as a normal login. The accounts are deterministic throwaway
+> `@example.com` users from `supabase/seed.sql`; on the hosted demo the whole
+> panel sits behind an HTTP Basic Auth gate. Pick a persona and you're in.
 
-> **Port conflicts.** The Next server (`3000`) is port-agnostic — if it's taken,
-> `next dev` picks the next free port automatically and the app is unaffected
-> (all its API calls are relative). The Supabase stack is *not*: `supabase start`
-> binds the fixed ports in `supabase/config.toml` (`54321` API, `54322` db,
-> `54323` studio, plus `54320`/`54324`/`54329`) and fails if one is taken. To
-> relocate, change the port in `config.toml` **only** — `pnpm dev` reads whatever
-> the running stack reports, so nothing else needs editing.
+![The sign-in page's one-click quick-login panel, one button per seeded persona](./docs/images/quick-login.png)
+
+> [!NOTE]
+> The quick-login password is env-driven and defaults to `localdev` on both
+> sides with zero config — `pnpm dev` injects `NEXT_PUBLIC_DEMO_PASSWORD=localdev`
+> and `seed.sql` hashes the same fallback. If you set a **custom**
+> `NEXT_PUBLIC_DEMO_PASSWORD` in `.env.local`, you must seed the DB with the
+> matching value (`PGOPTIONS="-c app.demo_password=<pw>"`), because a plain
+> `supabase db reset` always reseeds with `localdev` and would desync from your
+> override — sign-in then fails with `invalid_credentials`.
+
+> **Port conflicts.** The Next server runs on a fixed, uncommon port (`1955`) so
+> it matches the auth redirect allow-list in `supabase/config.toml` and rarely
+> clashes on a fresh machine. If `1955` _is_ taken, override it with
+> `pnpm dev -p <port>` (or `PORT=<port> pnpm dev`); update `site_url` /
+> `additional_redirect_urls` in `config.toml` to match only if you exercise auth
+> email/OAuth redirects. The Supabase stack binds the fixed ports in
+> `config.toml` (`54321` API, `54322` db, `54323` studio, plus
+> `54320`/`54324`/`54329`) and fails if one is taken. To relocate the stack,
+> change the port in `config.toml` **only** — `pnpm dev` reads whatever the
+> running stack reports, so nothing else needs editing.
 
 > **Local dev:** use Chrome. Firefox hits an upstream Next 16.2.10 dev-only reload
 > loop on pages with dynamic content (e.g. `/me`); see the note in `CLAUDE.md`.
@@ -66,7 +136,7 @@ One rule everything follows:
 - **Reads**: Server Components call the Supabase SDK directly. **RLS policies**
   scope what each role sees — there is no hand-written read authz in the app layer.
 - **Writes**: go through **Next.js API Route Handlers** that call `SECURITY
-  DEFINER` **RPCs**. This is the *only* client-writable surface. There are
+DEFINER` **RPCs**. This is the _only_ client-writable surface. There are
   deliberately **no INSERT/UPDATE/DELETE RLS policies** on the tables — mutation
   is impossible except through a vetted RPC.
 
@@ -97,65 +167,52 @@ only governs reads.
   not rewrite history). `cancelled_at` / `completed_at` are minted server-side.
 - `student_enrolments`, `universities`, `university_administrations` — tenancy.
 
+### Tenancy model
+
+Universities are the tenant boundary. A student is enrolled in **exactly one**
+university (the `student_enrolments` primary key is `student_id`, so a second
+enrolment is impossible), while an admin can administer **many** universities and
+a university can have **many** admins (the `university_administrations` composite
+primary key makes it a true many-to-many). Every booking freezes its
+`university_id` at creation, so oversight and history stay tenant-scoped even if a
+student later transfers.
+
+```mermaid
+erDiagram
+    profiles ||--o| student_enrolments : "enrolled in one"
+    universities ||--o{ student_enrolments : "has students"
+    profiles ||--o{ university_administrations : "administers"
+    universities ||--o{ university_administrations : "administered by"
+    profiles ||--o{ bookings : "as student / traveller"
+    universities ||--o{ bookings : "frozen snapshot"
+
+    profiles {
+        uuid id PK
+    }
+    universities {
+        uuid id PK
+        text name
+    }
+    student_enrolments {
+        uuid student_id PK "one university per student"
+        uuid university_id FK
+    }
+    university_administrations {
+        uuid user_id PK "M:N admin scoping"
+        uuid university_id PK
+    }
+    bookings {
+        uuid student_id FK
+        uuid time_traveller_id FK
+        uuid university_id FK "frozen at creation"
+    }
+```
+
 Booking slots are enforced at the **type level** by custom domains:
 `top_of_hour` → `business_hours` (9am–4pm, Australia/Melbourne) →
 `is_bookable_start_time` (Mon–Fri). `create_booking` also assigns a random free
 traveller, takes a `pg_advisory_xact_lock` on the slot to close a both-roles
 double-booking race, and enforces "can't be in two places at once".
-
-## Sitemap
-
-Legend: ✅ built
-
-### Pages
-
-```
-/                       ✅ public landing (availability calendar, traveller roster, universities)
-/book                   ✅ booking form — session dropdown (deep-linked via ?start_at=),
-                             editable first/last name (prefilled from profile), reason
-/me                     ✅ account page — identity + per-role bookings:
-  ├─ student            ✅   own consultations (reason/datetime/traveller/state),
-  │                            mark complete/incomplete, cancel, reschedule
-  ├─ traveller          ✅   own assigned sessions (read-only)
-  └─ admin/superadmin   ✅   oversight — consultations scoped by RLS
-                             (admin: their universities · superadmin: all), read-only
-  └─ profile edit       ✅   first/last name form (POSTs to /api/profile → update_profile RPC)
-/auth/login             ✅ email + password sign-in (+ one-click demo logins)
-/auth/sign-up           ✅ sign-up — captures first/last name + university, which the
-                             handle_new_user trigger turns into a profile + student role
-                             + enrolment
-/auth/sign-up-success   ✅ account-ready notice; email confirmation is OFF, so signup
-                             leaves the user logged in and the CTA continues any pending
-                             booking
-/auth/forgot-password   ✅ request a reset link
-/auth/update-password   ✅ set a new password
-/auth/confirm           ✅ email-confirmation / OTP callback (route handler)
-/auth/error             ✅ auth error page
-```
-
-### API Route Handlers (mutations → RPC)
-
-Every write goes through a handler that calls one `SECURITY DEFINER` RPC — there
-is no direct table DML from the client.
-
-```
-POST   /api/auth/signup           ✅ -> auth.signUp (metadata drives the profile trigger)
-POST   /api/bookings/create       ✅ -> create_booking(starts_at, reason, first_name, last_name)
-POST   /api/bookings/cancel       ✅ -> cancel_booking(starts_at)
-POST   /api/bookings/reschedule   ✅ -> reschedule_booking(current_start, new_start)
-POST   /api/bookings/complete     ✅ -> set_booking_completion(booking_id, is_complete)
-POST   /api/profile               ✅ -> update_profile(first_name, last_name)
-```
-
-> Booking cancel/reschedule key off `starts_at` (the RPCs identify a booking by
-> student + slot), while completion keys off `booking_id`.
-
-## Migrations
-
-`supabase/migrations/` is the source of truth and is **append-only** — never edit
-an applied migration; add a new one. `supabase/seed.sql` is **not** a migration
-(`db push` skips it); it seeds `auth.users` with fixed UUIDs and lets the trigger
-create profiles. It runs on local `supabase db reset`.
 
 ## Known limitations (by design, for this take-home)
 
@@ -165,7 +222,30 @@ create profiles. It runs on local `supabase db reset`.
   offset — the one documented spot that would need a migration to move to a
   fractional-hour zone.
 - **Soft delete only.** `deleted_at`; no hard delete / GDPR erasure path.
-- **No automated tests.** Backend correctness is checked by hand against local db.
+- **Thin verification gates.** One concurrency regression test exists
+  (`scripts/test-slot-lock-contention.sh`); otherwise backend correctness is
+  checked by hand against the local db, and there is no CI wiring the gates
+  (`pnpm typecheck` / `pnpm lint`) together yet.
+- **Errors can surface as empty states.** The `/me` account sections use
+  `data ?? []`, so an RLS/connection/schema failure reads as "no bookings/roles"
+  rather than an explicit failure — a correctness/observability gap.
+- **Booking lists are unpaginated.** The account views fetch their full booking
+  collection; PostgREST caps responses at `max_rows = 1000`
+  (`supabase/config.toml`), so a large admin/superadmin view would silently
+  truncate.
+- **Foreign keys are unindexed.** Beyond the active-slot partial unique indexes,
+  `bookings.student_id / time_traveller_id / university_id` and the
+  lifecycle/ordering columns have no supporting indexes — fine at demo scale.
+- **Availability scales multiplicatively.** `list_available_slots` walks
+  slots × travellers with a per-candidate busy-check (bounded by a 60-day clamp);
+  a set-based rewrite would be the real fix.
+- **Dependencies pinned loosely.** Runtime deps use `"latest"` ranges (the frozen
+  lockfile keeps deploys reproducible), there is one moderate transitive PostCSS
+  advisory via Next, and `.mcp.json` runs a dev tool via `npx -y`.
+
+These last ones map to findings #6–#10 and #12 in
+`docs/codebase-review-2026-07-13.md`; the verified triage and what was fixed are
+in `docs/codebase-review-2026-07-13-response.md`.
 
 ## Deploy
 
