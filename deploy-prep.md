@@ -5,31 +5,81 @@ is giving it a publicly reachable Supabase, since local dev points at
 `http://127.0.0.1:54321` (Docker on your machine), which Vercel's functions
 cannot reach.
 
+> **Live demo (current state).** This is already deployed:
+> - App: **https://lms-zeta-lyart.vercel.app** (Vercel project
+>   `brycehanscombs-projects/lms`, connected to `github.com/brycehans/lms` for
+>   auto-deploy on push).
+> - Supabase project ref `fegvvyztbsxcdemuzmiy`.
+>
+> The reproducible, non-secret hosted setup is captured in
+> **`scripts/setup-hosted-supabase.sh`** (schema + seed + auth config). The
+> secret bits (Vercel env vars) are documented below but deliberately not
+> committed. Section numbers below map to a from-scratch redeploy.
+
 ## 1. Stand up a hosted Supabase
 
 1. Create a hosted project at [supabase.com](https://supabase.com) (or
-   self-host somewhere with a public URL).
-2. Push the migrations — the full schema (tables, RLS, RPCs) lives in
-   `supabase/migrations/`, so this reproduces it cleanly:
+   self-host somewhere with a public URL) and link it:
 
    ```bash
    supabase link --project-ref <ref>
-   supabase db push
+   supabase login   # stores the Management-API token used by the script below
    ```
 
-   Skip `supabase/seed.sql` for production unless you want the fake seed data.
+2. Run the setup script from the repo root. It is idempotent — safe to re-run —
+   and is the source of truth for everything hosted that would otherwise live
+   only in the dashboard:
+
+   ```bash
+   bash scripts/setup-hosted-supabase.sh
+   ```
+
+   It does three things (edit the `PROJECT_REF` / `SITE_URL` at the top for a
+   different project):
+
+   - **Schema** — `supabase db push` applies every migration in
+     `supabase/migrations/` (tables, RLS, RPCs).
+   - **Seed** — runs `supabase/seed.sql` via `supabase db query` (**not**
+     `db push --include-seed`). `--include-seed` tracks the seed by content
+     hash and *silently skips execution* when the hash already matches, which
+     leaves the demo accounts with no password and makes every login fail with
+     `invalid_credentials`. `db query` always executes; `seed.sql` opens with
+     `delete from auth.users`, so it is a clean deterministic reset.
+   - **Auth config** — PATCHes the hosted auth settings via the Management API:
+     sets `site_url` + the redirect allow-list to the deploy URL, and enables
+     `mailer_autoconfirm` (email confirmation OFF). This mirrors `config.toml`'s
+     `enable_confirmations = false`; the app assumes signup logs the user in
+     immediately, so hosted must auto-confirm or signup stalls awaiting an
+     email. These live in the script (not `config.toml`) because `config.toml`
+     stays `localhost` for local dev — do **not** `supabase config push`, it
+     would revert the hosted URLs.
+
+   Skip the seed for a *real* production DB (it inserts throwaway demo data);
+   it is intended only for the reviewer demo.
 
 ## 2. Set env vars in Vercel
 
-Project → Settings → Environment Variables:
+These carry secrets, so they are set in Vercel only — not committed. With the
+`vercel` CLI linked (`vercel link`), the exact commands are:
+
+```bash
+printf '%s' 'https://<ref>.supabase.co'        | vercel env add NEXT_PUBLIC_SUPABASE_URL production
+printf '%s' '<publishable-or-anon-key>'        | vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production
+printf '%s' 'true'                             | vercel env add NEXT_PUBLIC_DEMO_LOGINS production
+printf '%s' 'prophecy'                         | vercel env add NEXT_PUBLIC_DEMO_PASSWORD production
+printf '%s' '<user>:<password>'                | vercel env add DEMO_BASIC_AUTH production
+```
 
 | Variable | Value |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | hosted project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | hosted project publishable / anon key |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | hosted project publishable / anon key (non-secret by design) |
 | `NEXT_PUBLIC_DEMO_LOGINS` | `true` to show the one-click Quick-login panel (demo only) |
 | `NEXT_PUBLIC_DEMO_PASSWORD` | shared demo password; must match the seed (default `prophecy`) |
-| `DEMO_BASIC_AUTH` | `user:password` — turns on the site-wide Basic Auth edge gate (see below). Server-only; **no** `NEXT_PUBLIC_` prefix. |
+| `DEMO_BASIC_AUTH` | `user:password` — turns on the site-wide Basic Auth edge gate (see below). Server-only; **no** `NEXT_PUBLIC_` prefix. Keep the value out of the repo, or the gate is pointless. |
+
+`NEXT_PUBLIC_*` values are inlined at **build time**, so set these before the
+first production deploy (`vercel --prod`) — changing them later needs a rebuild.
 
 ## Quick-login (demo reviewer access)
 
@@ -73,26 +123,28 @@ the login page, so it is **only safe behind edge gating**:
 
 ### Enabling it on the hosted demo
 
-1. Run `supabase/seed.sql` against the hosted DB once (SQL editor, or
-   `psql "$HOSTED_DB_URL" -f supabase/seed.sql`). `db push` does **not** run it.
-   To use a non-default password, set the GUC when running:
-   `PGOPTIONS="-c app.demo_password=yourpw" psql "$HOSTED_DB_URL" -f supabase/seed.sql`.
+1. Seed the demo accounts — handled by `scripts/setup-hosted-supabase.sh`
+   (see section 1). To use a non-default password, run the seed with the GUC
+   set: `PGOPTIONS="-c app.demo_password=yourpw" psql "$HOSTED_DB_URL" -f supabase/seed.sql`.
 2. Set `NEXT_PUBLIC_DEMO_LOGINS=true` in Vercel (and `NEXT_PUBLIC_DEMO_PASSWORD`
    to the same password if you overrode the default).
 3. Set `DEMO_BASIC_AUTH=user:password` in Vercel **before** enabling the flag, so
    the demo is never reachable un-gated. Verify by loading the deployment: the
    browser should prompt for Basic Auth credentials before any page renders.
 
-## 3. Configure auth redirect URLs
+## 3. Auth redirect URLs (handled by the setup script)
 
 The signup route handler (`app/api/auth/signup/route.ts`) sets
-`emailRedirectTo` from the request's `origin` header — on Vercel that's your
-`*.vercel.app` domain. Supabase rejects redirects that aren't allow-listed, so
-add that domain under **Auth → URL Configuration → Redirect URLs** in the
-hosted dashboard.
+`emailRedirectTo` from the request's `origin` header, and Supabase rejects
+redirects that aren't allow-listed. `scripts/setup-hosted-supabase.sh` sets
+`site_url` + the redirect allow-list to the deploy URL for you, so there's no
+manual dashboard step. (To do it by hand instead: **Auth → URL Configuration →
+Redirect URLs** in the dashboard.)
 
-Confirmation emails use Supabase's built-in SMTP by default (heavily
-rate-limited) — fine for a demo, but wire up real SMTP for anything serious.
+Because the script also enables `mailer_autoconfirm`, signup logs the user in
+immediately and no confirmation email is sent. If you turn confirmations back
+on, note that Supabase's built-in SMTP is heavily rate-limited — wire up real
+SMTP for anything serious.
 
 ## Non-issues
 
