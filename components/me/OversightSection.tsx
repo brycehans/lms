@@ -23,7 +23,7 @@ export async function OversightSection({
   const { data: bookings } = await supabase
     .from("bookings")
     .select(
-      "id, starts_at, reason, time_traveller_id, student_first_name, student_last_name, university_id, cancelled_at, completed_at",
+      "id, starts_at, reason, time_traveller_id, student_first_name, student_last_name, university_id, cancelled_at, completed_at, deleted_at",
     );
 
   const rows = bookings ?? [];
@@ -69,6 +69,7 @@ export async function OversightSection({
         <BookingCard
           startsAt={b.starts_at}
           status={status}
+          deleted={!!b.deleted_at}
           details={
             <>
               <span className="text-foreground">{studentName}</span> with{" "}

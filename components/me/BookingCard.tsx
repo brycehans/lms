@@ -24,14 +24,22 @@ export function BookingCard({
   status,
   details,
   actions,
+  deleted = false,
 }: {
   startsAt: string;
   status: BookingStatus;
   details: React.ReactNode;
   actions?: React.ReactNode;
+  /**
+   * Soft-deleted (deleted_at set). Only the superadmin oversight view ever sees
+   * these rows — RLS hides them from everyone else — so the marker is opt-in
+   * rather than a fifth BookingStatus (which the student/traveller filters would
+   * then have to carry a state they can never encounter).
+   */
+  deleted?: boolean;
 }) {
   return (
-    <Card>
+    <Card className={deleted ? "opacity-60" : undefined}>
       <CardContent className="flex flex-col gap-3 p-4">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -40,9 +48,12 @@ export function BookingCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <p className="font-medium">{formatSlot(startsAt)}</p>
-              <Badge variant={STATUS_VARIANT[status]} className="shrink-0">
-                {STATUS_LABEL[status]}
-              </Badge>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {deleted && <Badge variant="destructive">Deleted</Badge>}
+                <Badge variant={STATUS_VARIANT[status]}>
+                  {STATUS_LABEL[status]}
+                </Badge>
+              </div>
             </div>
             <div className="mt-0.5 text-sm text-muted-foreground">
               {details}
