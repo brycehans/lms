@@ -18,10 +18,11 @@ import { Avatar } from "@/components/home/Avatar";
  * firewalled to the Vercel deployment + Vercel access protection).
  */
 
-// Must match the password seed.sql hashes into the accounts. Both default to
-// "prophecy"; override both together (NEXT_PUBLIC_DEMO_PASSWORD + the seed's
-// app.demo_password) if you want a different one.
-const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "prophecy";
+// Sourced ONLY from the environment (never hardcoded), so no likely value leaks
+// into the repo or the shipped client bundle. Must match the password seed.sql
+// hashes into the accounts (its app.demo_password GUC). The panel no-ops if it's
+// unset — see the guard in the component below.
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
 
 // `portrait: true` only for the personas that are travellers (they have a
 // /public/travellers/<slug>.webp). The rest fall back to initials — we don't
@@ -86,7 +87,9 @@ export function QuickLogin({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (process.env.NEXT_PUBLIC_DEMO_LOGINS !== "true") return null;
+  if (process.env.NEXT_PUBLIC_DEMO_LOGINS !== "true" || !DEMO_PASSWORD) {
+    return null;
+  }
 
   const login = async (email: string) => {
     setBusy(email);
