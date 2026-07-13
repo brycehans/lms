@@ -41,6 +41,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local-only working docs (kept out of the public repo)
+docs/code-review-2026-07-13.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
