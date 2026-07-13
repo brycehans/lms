@@ -17,6 +17,21 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Sanitize a post-auth redirect target. Only same-origin, path-absolute URLs
+ * (a single leading "/", not "//host" and not "/\host") are trusted; anything
+ * else — a full URL, a protocol-relative "//evil.com", a missing value — falls
+ * back to `/me`. This is the open-redirect guard for the `?next=` param we thread
+ * through the login gate so a booking deep-link survives a round-trip to login.
+ */
+export function safeNext(next: string | null | undefined): string {
+  if (typeof next !== "string") return "/me";
+  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
+    return "/me";
+  }
+  return next;
+}
+
 // This check can be removed, it is just for tutorial purposes
 export const hasEnvVars =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&

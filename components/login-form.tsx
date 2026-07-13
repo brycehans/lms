@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, safeNext } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { QuickLogin } from "@/components/QuickLogin";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,13 @@ type LoginFormValues = {
 
 export function LoginForm({
   className,
+  next,
   ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+}: React.ComponentPropsWithoutRef<"div"> & { next?: string }) {
   const router = useRouter();
+  // Where to land after auth: the sanitized `?next=` deep-link (e.g. the booking
+  // slot the visitor was gated out of), or their account page by default.
+  const dest = safeNext(next);
   const {
     register,
     handleSubmit,
@@ -43,8 +47,8 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      // Land on the user's own account page — their bookings + role context.
-      router.push("/me");
+      // Land on the requested deep-link if any, else the user's account page.
+      router.push(dest);
     } catch (error: unknown) {
       setError("root", {
         message: error instanceof Error ? error.message : "An error occurred",
@@ -60,7 +64,7 @@ export function LoginForm({
         </CardHeader>
         <CardContent>
           {/* Preferred entry for reviewers; self-hides unless demo logins are on. */}
-          <QuickLogin className="mb-6" />
+          <QuickLogin className="mb-6" next={dest} />
           <form onSubmit={handleSubmit(onSubmit)}>
             <p className="text-sm mb-4">
               Enter your email below to login to your account
@@ -101,7 +105,11 @@ export function LoginForm({
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
               <Link
-                href="/auth/sign-up"
+                href={
+                  next
+                    ? `/auth/sign-up?next=${encodeURIComponent(dest)}`
+                    : "/auth/sign-up"
+                }
                 className="underline underline-offset-4"
               >
                 Sign up

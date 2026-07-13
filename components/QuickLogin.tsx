@@ -66,7 +66,14 @@ const ACCOUNTS = [
   },
 ];
 
-export function QuickLogin({ className }: { className?: string }) {
+export function QuickLogin({
+  className,
+  next = "/me",
+}: {
+  className?: string;
+  // Post-login destination; pre-sanitized by the caller (login-form via safeNext).
+  next?: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +94,7 @@ export function QuickLogin({ className }: { className?: string }) {
         return;
       }
       // Refresh so server components re-read the freshly-set auth cookie.
-      router.push("/me");
+      router.push(next);
       router.refresh();
     } finally {
       // Always clear `busy` — including on the success path. We navigate to /me,
