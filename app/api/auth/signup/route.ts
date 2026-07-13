@@ -14,13 +14,14 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 },
+    );
   }
 
   const { email, password, firstName, lastName, universityId } = body;
 
-  // Re-validate on the server — the client's react-hook-form rules are for UX
-  // only and cannot be trusted.
   if (
     typeof email !== "string" ||
     typeof password !== "string" ||
@@ -33,25 +34,37 @@ export async function POST(request: Request) {
     !lastName ||
     !universityId
   ) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing required fields" },
+      { status: 400 },
+    );
   }
 
-  // The browser sends its origin on the fetch; fall back to the configured site
-  // URL so the confirmation email links somewhere valid.
-  const origin =
-    request.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL;
-
   const supabase = await createClient();
+
+  // universityId is only checked for shape above — confirm it names a real,
+  // non-deleted university before trusting it. The public_read_universities
+  // RLS policy hides soft-deleted rows, and anon can read the granted id
+  // column. A malformed (non-uuid) value surfaces as a query error and is
+  // treated as invalid too. Guards against a forged/stale id, since nothing
+  // downstream enforces it yet.
+  const { data: university, error: universityError } = await supabase
+    .from("universities")
+    .select("id")
+    .eq("id", universityId)
+    .maybeSingle();
+
+  if (universityError || !university) {
+    return NextResponse.json(
+      { error: "Invalid university selection" },
+      { status: 400 },
+    );
+  }
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: origin ? `${origin}/protected` : undefined,
-      // Keys must be snake_case: the handle_new_user trigger reads
-      // raw_user_meta_data ->> 'first_name' / 'last_name' to seed the profile.
-      // NOTE: university_id is carried here too, but nothing consumes it yet —
-      // enrolment (student_enrolments row + student role) still needs a backend
-      // path. See the handoff note.
       data: {
         first_name: firstName,
         last_name: lastName,
