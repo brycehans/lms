@@ -149,6 +149,33 @@ immediately and no confirmation email is sent. If you turn confirmations back
 on, note that Supabase's built-in SMTP is heavily rate-limited — wire up real
 SMTP for anything serious.
 
+## 4. Custom domain via Cloudflare (optional)
+
+To serve the app from a vanity host like `lms.brycehanscomb.com` while the DNS
+zone lives on Cloudflare:
+
+1. **Vercel** — add the domain under the project's **Settings → Domains**. For a
+   subdomain Vercel asks for a CNAME → `cname.vercel-dns.com`.
+2. **Cloudflare DNS** — create that CNAME. Add it **grey-clouded (DNS only)
+   first** so Vercel's Let's Encrypt HTTP-01 challenge isn't intercepted by the
+   proxy; wait until Vercel shows the cert as **Issued**.
+3. **Cloudflare SSL/TLS mode** — set to **Full (Strict)**. Do **not** use
+   *Flexible*: it speaks HTTP to the origin, Vercel force-redirects HTTP→HTTPS,
+   and you get an infinite redirect loop.
+4. **Orange cloud (optional)** — once the cert is issued you may flip the record
+   to proxied. This is redundant (Vercel is already a global edge/CDN), so only
+   do it if you specifically want Cloudflare's WAF/caching/analytics or to hide
+   the Vercel origin. **Grey cloud is the lower-friction default** and skips the
+   cert and redirect-loop gotchas entirely. If you do proxy, the app sees
+   Cloudflare IPs unless it reads `CF-Connecting-IP`.
+
+**Update the auth config for the new origin.** The signup route derives
+`emailRedirectTo` from the request `origin` (see section 3), so the custom domain
+must be in Supabase's `site_url` / redirect allow-list or signup breaks. Edit
+`SITE_URL` at the top of `scripts/setup-hosted-supabase.sh` to the custom domain
+and re-run it (it's idempotent), or add the URL by hand in **Auth → URL
+Configuration**.
+
 ## Non-issues
 
 - `dev: "supabase start & next dev"` is dev-only. Vercel runs `build`

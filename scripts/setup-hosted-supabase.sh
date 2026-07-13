@@ -24,11 +24,15 @@ set -euo pipefail
 
 # --- Config (edit these for a different project / deployment) ------------------
 PROJECT_REF="fegvvyztbsxcdemuzmiy"
-# The hosted app's canonical URL. Used as Supabase's auth redirect base.
-SITE_URL="https://lms-zeta-lyart.vercel.app"
-# Preview/deployment URLs also allowed to complete auth redirects (password
-# reset, OAuth). The wildcard covers Vercel's per-deployment hostnames.
-REDIRECT_ALLOW_LIST="${SITE_URL}/**,https://*-brycehanscombs-projects.vercel.app/**"
+# The hosted app's canonical URL. Used as Supabase's auth redirect base and to
+# construct links in auth emails. This is the Cloudflare-fronted vanity domain
+# (see deploy-prep.md section 4).
+SITE_URL="https://lms.brycehanscomb.com"
+# Other URLs allowed to complete auth redirects (password reset, OAuth). These
+# are the Vercel hostnames the same project also serves on: the original prod
+# URL, the project-scoped alias, and the per-deployment preview wildcard. Each
+# `/**` also matches the bare root path, so no separate no-path entries needed.
+REDIRECT_ALLOW_LIST="${SITE_URL}/**,https://lms-zeta-lyart.vercel.app/**,https://*-brycehanscombs-projects.vercel.app/**,https://lms-*-brycehanscombs-projects.vercel.app/**"
 
 cd "$(dirname "$0")/.."
 
