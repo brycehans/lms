@@ -29,6 +29,7 @@ Project → Settings → Environment Variables:
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | hosted project publishable / anon key |
 | `NEXT_PUBLIC_DEMO_LOGINS` | `true` to show the one-click Quick-login panel (demo only) |
 | `NEXT_PUBLIC_DEMO_PASSWORD` | shared demo password; must match the seed (default `prophecy`) |
+| `DEMO_BASIC_AUTH` | `user:password` — turns on the site-wide Basic Auth edge gate (see below). Server-only; **no** `NEXT_PUBLIC_` prefix. |
 
 ## Quick-login (demo reviewer access)
 
@@ -58,11 +59,12 @@ the login page, so it is **only safe behind edge gating**:
 - **Never enable it on a public-facing production deploy.** `NEXT_PUBLIC_DEMO_LOGINS`
   must be unset/`false` there, so the panel and the client-side password never
   ship in the bundle.
-- For the reviewer demo, gate access at the edge, not in the app:
-  - **Vercel access protection** (password/SSO) in front of the whole deployment,
-    so only the reviewer reaches the login page at all.
-  - **DB network restriction** so the hosted Postgres only accepts connections
-    from the Vercel deployment — a leaked anon key can't be used from elsewhere.
+- For the reviewer demo, we gate access at the edge with a **self-hosted HTTP
+  Basic Auth gate** (`proxy.ts`), enabled by the `DEMO_BASIC_AUTH` env var. It
+  runs in the middleware before any app code, so an un-authenticated visitor
+  never reaches the login page or `/api/**` at all — it plays the same role as
+  Vercel Access Protection but needs no paid plan. Set `DEMO_BASIC_AUTH` to a
+  `user:password` string and share those with the reviewer.
 - The accounts are **seed data only** (throwaway `@example.com` users, no real
   PII), and the password is a throwaway shared secret — treat both as public.
 - Because it rides the standard auth flow, it grants **no more than a real login
@@ -77,7 +79,9 @@ the login page, so it is **only safe behind edge gating**:
    `PGOPTIONS="-c app.demo_password=yourpw" psql "$HOSTED_DB_URL" -f supabase/seed.sql`.
 2. Set `NEXT_PUBLIC_DEMO_LOGINS=true` in Vercel (and `NEXT_PUBLIC_DEMO_PASSWORD`
    to the same password if you overrode the default).
-3. Confirm the edge gating above is in place **before** enabling the flag.
+3. Set `DEMO_BASIC_AUTH=user:password` in Vercel **before** enabling the flag, so
+   the demo is never reachable un-gated. Verify by loading the deployment: the
+   browser should prompt for Basic Auth credentials before any page renders.
 
 ## 3. Configure auth redirect URLs
 
