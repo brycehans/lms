@@ -88,7 +88,12 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
     const now = Date.now();
     const from = new Date(now).toISOString();
     const to = new Date(now + RESCHEDULE_WINDOW_DAYS * DAY_MS).toISOString();
-    const { data, error } = await createClient().rpc("list_available_slots", {
+    // Reschedule-specific RPC: it only returns slots where THIS booking's
+    // assigned traveller and the student are both free, so every option offered
+    // will pass reschedule_booking's checks. (list_available_slots is the
+    // any-traveller new-booking query and would surface slots that then fail.)
+    const { data, error } = await createClient().rpc("list_reschedule_slots", {
+      p_current_start: startsAt,
       p_from: from,
       p_to: to,
     });
@@ -97,12 +102,10 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
       setSlots([]);
       return;
     }
-    // setof timestamptz → bare ISO strings. Drop the slot the booking is
-    // already on (the RPC would reject a same-time move anyway).
+    // setof timestamptz → bare ISO strings. The RPC already excludes the
+    // current slot.
     setSlots(
-      (data as string[])
-        .filter((iso) => iso !== startsAt)
-        .map((iso) => ({ iso, label: formatSlot(iso) })),
+      (data as string[]).map((iso) => ({ iso, label: formatSlot(iso) })),
     );
     setSlotsStatus("idle");
   }
