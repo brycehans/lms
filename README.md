@@ -37,7 +37,7 @@ Legend: ✅ built · 🔲 to build · ⚙️ starter-kit sample (not part of the
   ├─ traveller          ✅   own assigned sessions (read-only)
   └─ admin/superadmin   ✅   oversight — consultations scoped by RLS
                              (admin: their universities · superadmin: all), read-only
-  └─ profile edit       🔲   first/last name form (update_profile RPC already exists)
+  └─ profile edit       ✅   first/last name form (POSTs to /api/profile → update_profile RPC)
 /auth/login             ✅ email + password sign-in (+ one-click demo logins)
 /auth/sign-up           ✅ sign-up — captures first/last name + university, which the
                              handle_new_user trigger turns into a profile + student role
@@ -63,7 +63,7 @@ POST   /api/bookings/create       ✅ -> create_booking(starts_at, reason, first
 POST   /api/bookings/cancel       ✅ -> cancel_booking(starts_at)
 POST   /api/bookings/reschedule   ✅ -> reschedule_booking(current_start, new_start)
 POST   /api/bookings/complete     ✅ -> set_booking_completion(booking_id, is_complete)
-       /api/profile               🔲 -> update_profile(first_name, last_name)  (RPC exists, no handler yet)
+POST   /api/profile               ✅ -> update_profile(first_name, last_name)
 ```
 
 > Booking cancel/reschedule key off `starts_at` (the RPCs identify a booking by

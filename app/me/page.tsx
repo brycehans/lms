@@ -4,11 +4,15 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
+import { UserPen } from "lucide-react";
+
 import { BrandMark } from "@/components/BrandMark";
 import { AuthButton } from "@/components/auth-button";
 import { Footer } from "@/components/Footer";
 import { Avatar } from "@/components/home/Avatar";
+import { SectionHeading } from "@/components/home/SectionHeading";
 import { RoleNote } from "@/components/me/RoleNote";
+import { ProfileForm } from "@/components/me/ProfileForm";
 import { StudentSection } from "@/components/me/StudentSection";
 import { TravellerSection } from "@/components/me/TravellerSection";
 import { OversightSection } from "@/components/me/OversightSection";
@@ -84,6 +88,23 @@ async function MeContent() {
       </header>
 
       <RoleNote roles={roles} />
+
+      {/* Profile edit — kept above the bookings so it stays reachable without
+          scrolling past a long list. Only shown once we have a profile row to
+          prefill from. */}
+      {profile && (
+        <section className="space-y-4">
+          <SectionHeading icon={UserPen} title="Your profile" />
+          <p className="text-sm text-muted-foreground">
+            Update the name on your account. This won&apos;t change the name on
+            bookings you&apos;ve already made.
+          </p>
+          <ProfileForm
+            defaultFirstName={profile.first_name}
+            defaultLastName={profile.last_name}
+          />
+        </section>
+      )}
 
       {isStudent && (
         <Suspense fallback={<SectionSkeleton />}>
