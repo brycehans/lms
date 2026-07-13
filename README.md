@@ -118,14 +118,19 @@ rehydrates from scratch. It prompts before deleting; `--dry-run` previews,
 
 ```bash
 pnpm typecheck                 # tsc --noEmit — the reliable pre-commit gate
+pnpm test                      # unit (vitest) + pgTAP DB suite + slot-lock contention
 pnpm build                     # next build
 pnpm teardown                  # stop stack + wipe db + remove derived files → fresh-clone state
 pnpm supabase db reset         # drop, re-run ALL migrations, then seed.sql (local rebuild)
 pnpm supabase migration new X  # scaffold a timestamped migration
 ```
 
-There is no automated test suite; backend correctness is verified by hand against
-the local db (Studio / SQL editor).
+Tests target the layer that matters here — the security model. The **pgTAP suite**
+(`supabase/tests/`, `pnpm test:db`) exercises the RLS read policies and every RPC's
+invariants under a role-impersonation rig; a **two-session shell test**
+(`pnpm test:contention`) covers the per-slot advisory lock's concurrency behaviour;
+and **vitest** (`pnpm test:unit`) covers the thin HTTP contract of the API route
+handlers. The DB tiers need the local stack running. See `supabase/tests/README.md`.
 
 ## Architecture
 
@@ -242,10 +247,13 @@ conversation. Each is marked with a `TRADEOFF OPPORTUNITY` comment in the source
   offset — the one documented spot that would need a migration to move to a
   fractional-hour zone.
 - **Soft delete only.** `deleted_at`; no hard delete / GDPR erasure path.
-- **Thin verification gates.** One concurrency regression test exists
-  (`scripts/test-slot-lock-contention.sh`); otherwise backend correctness is
-  checked by hand against the local db, and there is no CI wiring the gates
-  (`pnpm typecheck` / `pnpm lint`) together yet.
+- **No CI yet.** The gates exist and pass — `pnpm typecheck`, `pnpm lint`, and
+  `pnpm test` (vitest route contracts + the pgTAP RLS/RPC suite + the two-session
+  slot-lock regression) — but nothing runs them automatically on push. The DB
+  tiers also need the local Supabase stack up, so wiring them into CI means
+  standing up Postgres in the pipeline (or pointing `test:db` at an ephemeral
+  linked project). Coverage is deliberately weighted to the backend security
+  model; the front end is not under test.
 - **Errors can surface as empty states.** The `/me` account sections use
   `data ?? []`, so an RLS/connection/schema failure reads as "no bookings/roles"
   rather than an explicit failure — a correctness/observability gap.

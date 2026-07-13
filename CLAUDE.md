@@ -25,7 +25,19 @@ supabase migration new <name>  # scaffold a new timestamped migration
 supabase db push               # apply migrations to the LINKED (hosted) project — does NOT run seed.sql
 ```
 
-There is no test suite. Backend correctness is verified by hand against the local db (Studio / SQL editor).
+Tests (the local stack must be running for the DB tiers):
+
+```bash
+pnpm test             # test:unit + test:db + test:contention, in order
+pnpm test:unit        # vitest — API route-handler contract tests (Supabase client mocked)
+pnpm test:db          # pgTAP suite in supabase/tests/ — RLS + RPC invariants (see that dir's README)
+pnpm test:contention  # two-session slot-lock regression (scripts/test-slot-lock-contention.sh)
+```
+
+The pgTAP suite is the primary gate: it exercises the RLS read policies and every
+RPC's invariants under a role-impersonation rig, which is where the security model
+actually lives. `test:unit` covers only the thin HTTP contract around the RPCs.
+Anything not covered by tests is still verified by hand against the local db.
 
 ## Architecture — the security model is the whole point
 
