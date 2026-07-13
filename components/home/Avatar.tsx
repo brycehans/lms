@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 function initials(name: string): string {
@@ -27,7 +27,24 @@ export function Avatar({
   src?: string;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  // Track the *src* that failed, not a bare boolean. This means a changed `src`
+  // is retried, but a src already known to be broken never reloads — so there's
+  // no error→re-render→reload thrash on a persistently-missing image.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = src != null && failedSrc === src;
+
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  // The image is server-rendered, so it can 404/error before React hydrates and
+  // attaches `onError` — that error would otherwise be missed, leaving a broken
+  // <img> the browser keeps retrying. On mount, catch an already-errored image
+  // (loaded but zero-size) and fall back immediately.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth === 0) {
+      setFailedSrc(src ?? null);
+    }
+  }, [src]);
 
   const base = cn(
     "shrink-0 rounded-lg overflow-hidden bg-muted text-muted-foreground",
@@ -40,10 +57,11 @@ export function Avatar({
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
+        ref={imgRef}
         src={src}
         alt={name}
         className={base}
-        onError={() => setFailed(true)}
+        onError={() => setFailedSrc(src)}
       />
     );
   }

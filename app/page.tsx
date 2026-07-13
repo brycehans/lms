@@ -40,7 +40,7 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center overflow-x-clip">
       <div className="flex-1 w-full flex flex-col items-center">
-        <nav className="sticky top-0 z-50 w-full flex justify-center border-b border-b-foreground/10 h-16 bg-background/80 backdrop-blur-sm">
+        <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
           <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
             <BrandMark />
             <Suspense>
@@ -89,7 +89,7 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="flex flex-col gap-16 w-full max-w-5xl p-5 py-12">
+        <div className="flex-1 flex flex-col gap-16 w-full max-w-5xl p-5 py-12">
           <Suspense>
             <AvailabilityCalendar />
           </Suspense>
