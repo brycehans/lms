@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
 import { BrandMark } from "@/components/BrandMark";
 import { AuthButton } from "@/components/auth-button";
 import { Footer } from "@/components/Footer";
+import { buttonVariants } from "@/components/ui/button";
 import { BookingForm } from "@/components/book/BookingForm";
 
 export const metadata: Metadata = {
@@ -42,11 +44,40 @@ async function BookContent({
     redirect(`/auth/login?next=${encodeURIComponent(here)}`);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("first_name, last_name")
-    .eq("id", userId)
-    .maybeSingle();
+  const [{ data: profile }, { data: roleRows }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("first_name, last_name")
+      .eq("id", userId)
+      .maybeSingle(),
+    // Relies on the `read_own_roles` self-read policy on user_roles.
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "student"),
+  ]);
+
+  // Only students can book. `create_booking` enforces this server-side (no
+  // enrolment → rejected); this is the friendly front door so a traveller/admin
+  // who follows a deep-link isn't handed a form that can only fail.
+  const isStudent = (roleRows ?? []).length > 0;
+  if (!isStudent) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold leading-tight">
+          Booking is for students
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Consultations can only be booked from a student account. Your account
+          doesn&apos;t hold a student role, so there&apos;s nothing to book here.
+        </p>
+        <Link href="/me" className={buttonVariants({ className: "w-fit" })}>
+          Back to my account
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
