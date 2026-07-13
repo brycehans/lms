@@ -4,7 +4,7 @@ import { CalendarCheck, CalendarPlus, Sparkles } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { SectionHeading } from "@/components/home/SectionHeading";
 import { StudentBookings, type StudentBooking } from "./StudentBookings";
-import { bookingStatus, sortByLifecycle } from "./booking-utils";
+import { bookingStatus } from "./booking-utils";
 
 /**
  * The student's own bookings. The bookings visibility wall (RLS) already scopes
@@ -18,7 +18,9 @@ export async function StudentSection({ userId }: { userId: string }) {
 
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("id, starts_at, reason, time_traveller_id, cancelled_at, completed_at")
+    .select(
+      "id, starts_at, reason, time_traveller_id, cancelled_at, completed_at",
+    )
     .eq("student_id", userId);
 
   const rows = bookings ?? [];
@@ -36,22 +38,25 @@ export async function StudentSection({ userId }: { userId: string }) {
     }
   }
 
-  const items: StudentBooking[] = sortByLifecycle(
-    rows.map((b) => ({
-      id: b.id,
-      starts_at: b.starts_at,
-      reason: b.reason,
-      travellerName: names.get(b.time_traveller_id) ?? "your time traveller",
-      status: bookingStatus(b, now),
-    })),
-  );
+  // Ordering + filtering happen client-side in BookingList; pass rows as-is.
+  const items: StudentBooking[] = rows.map((b) => ({
+    id: b.id,
+    starts_at: b.starts_at,
+    reason: b.reason,
+    travellerName: names.get(b.time_traveller_id) ?? "your time traveller",
+    status: bookingStatus(b, now),
+  }));
 
   return (
     <section className="space-y-4">
       {/* Book-a-new-session CTA — the primary action a student comes here for. */}
       <div className="flex flex-col items-start gap-3 rounded-xl border bg-accent/60 p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-2 text-sm text-foreground">
-          <Sparkles size={18} strokeWidth={2} className="shrink-0 text-primary" />
+          <Sparkles
+            size={18}
+            strokeWidth={2}
+            className="shrink-0 text-primary"
+          />
           Ready to find out how you did? Book a consultation with a time
           traveller.
         </p>

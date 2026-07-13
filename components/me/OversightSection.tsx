@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ShieldCheck } from "lucide-react";
 import { SectionHeading } from "@/components/home/SectionHeading";
 import { BookingCard } from "./BookingCard";
-import { bookingStatus, sortByLifecycle } from "./booking-utils";
+import { BookingList } from "./BookingList";
+import { bookingStatus } from "./booking-utils";
 
 /**
  * The oversight list for staff. We deliberately do NOT filter by university
@@ -33,8 +34,13 @@ export async function OversightSection({
 
   const [{ data: travellers }, { data: unis }] = await Promise.all([
     travellerIds.length
-      ? supabase.from("profiles").select("id, first_name, last_name").in("id", travellerIds)
-      : Promise.resolve({ data: [] as { id: string; first_name: string; last_name: string }[] }),
+      ? supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", travellerIds)
+      : Promise.resolve({
+          data: [] as { id: string; first_name: string; last_name: string }[],
+        }),
     uniIds.length
       ? supabase.from("universities").select("id, name").in("id", uniIds)
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
@@ -47,46 +53,42 @@ export async function OversightSection({
   const uniNames = new Map<string, string>();
   for (const u of unis ?? []) uniNames.set(u.id, u.name);
 
-  const items = sortByLifecycle(
-    rows.map((b) => ({
+  const items = rows.map((b) => {
+    const status = bookingStatus(b, now);
+    const studentName = `${b.student_first_name} ${b.student_last_name}`;
+    const travellerName =
+      travellerNames.get(b.time_traveller_id) ?? "a time traveller";
+    const universityName = uniNames.get(b.university_id);
+    return {
       id: b.id,
-      starts_at: b.starts_at,
-      reason: b.reason,
-      studentName: `${b.student_first_name} ${b.student_last_name}`,
-      travellerName: travellerNames.get(b.time_traveller_id) ?? "a time traveller",
-      universityName: uniNames.get(b.university_id),
-      status: bookingStatus(b, now),
-    })),
-  );
+      startsAt: b.starts_at,
+      status,
+      card: (
+        <BookingCard
+          startsAt={b.starts_at}
+          status={status}
+          details={
+            <>
+              <span className="text-foreground">{studentName}</span> with{" "}
+              <span className="text-foreground">{travellerName}</span>
+              {universityName ? ` · ${universityName}` : ""}
+              <span className="mt-1 block truncate">{b.reason}</span>
+            </>
+          }
+        />
+      ),
+    };
+  });
 
   const title = isSuperadmin ? "All bookings" : "Bookings at your universities";
 
   return (
     <section className="space-y-4">
       <SectionHeading icon={ShieldCheck} title={title} />
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          There are no bookings in your scope yet.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {items.map((b) => (
-            <BookingCard
-              key={b.id}
-              startsAt={b.starts_at}
-              status={b.status}
-              details={
-                <>
-                  <span className="text-foreground">{b.studentName}</span> with{" "}
-                  <span className="text-foreground">{b.travellerName}</span>
-                  {b.universityName ? ` · ${b.universityName}` : ""}
-                  <span className="mt-1 block truncate">{b.reason}</span>
-                </>
-              }
-            />
-          ))}
-        </div>
-      )}
+      <BookingList
+        items={items}
+        emptyMessage="There are no bookings in your scope yet."
+      />
     </section>
   );
 }

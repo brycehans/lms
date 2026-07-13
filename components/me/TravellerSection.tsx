@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Telescope } from "lucide-react";
 import { SectionHeading } from "@/components/home/SectionHeading";
 import { BookingCard } from "./BookingCard";
-import { bookingStatus, sortByLifecycle } from "./booking-utils";
+import { BookingList } from "./BookingList";
+import { bookingStatus } from "./booking-utils";
 
 /**
  * The sessions assigned to a traveller. Read-only: travellers don't schedule,
@@ -20,41 +21,36 @@ export async function TravellerSection({ userId }: { userId: string }) {
     )
     .eq("time_traveller_id", userId);
 
-  const items = sortByLifecycle(
-    (bookings ?? []).map((b) => ({
+  const items = (bookings ?? []).map((b) => {
+    const status = bookingStatus(b, now);
+    const studentName = `${b.student_first_name} ${b.student_last_name}`;
+    return {
       id: b.id,
-      starts_at: b.starts_at,
-      reason: b.reason,
-      studentName: `${b.student_first_name} ${b.student_last_name}`,
-      status: bookingStatus(b, now),
-    })),
-  );
+      startsAt: b.starts_at,
+      status,
+      card: (
+        <BookingCard
+          startsAt={b.starts_at}
+          status={status}
+          details={
+            <>
+              with student{" "}
+              <span className="text-foreground">{studentName}</span>
+              <span className="mt-1 block truncate">{b.reason}</span>
+            </>
+          }
+        />
+      ),
+    };
+  });
 
   return (
     <section className="space-y-4">
       <SectionHeading icon={Telescope} title="Sessions assigned to you" />
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No students have been assigned to you yet.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {items.map((b) => (
-            <BookingCard
-              key={b.id}
-              startsAt={b.starts_at}
-              status={b.status}
-              details={
-                <>
-                  with student{" "}
-                  <span className="text-foreground">{b.studentName}</span>
-                  <span className="mt-1 block truncate">{b.reason}</span>
-                </>
-              }
-            />
-          ))}
-        </div>
-      )}
+      <BookingList
+        items={items}
+        emptyMessage="No students have been assigned to you yet."
+      />
     </section>
   );
 }

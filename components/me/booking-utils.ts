@@ -1,6 +1,25 @@
 export type BookingStatus = "upcoming" | "past" | "completed" | "cancelled";
 
 /**
+ * Human labels for each lifecycle state, shared by the card badge and the
+ * status filter so the two never drift apart.
+ */
+export const STATUS_LABEL: Record<BookingStatus, string> = {
+  upcoming: "Upcoming",
+  past: "Awaiting completion",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+// The order statuses are offered in the filter (and grouped by lifecycle sort).
+export const STATUS_ORDER: BookingStatus[] = [
+  "upcoming",
+  "past",
+  "completed",
+  "cancelled",
+];
+
+/**
  * Derive a booking's lifecycle state from its timestamps. Order matters:
  * a cancelled booking is cancelled even if it was previously completed, and a
  * completed booking outranks the plain "past" bucket. Everything else is
@@ -11,7 +30,11 @@ export type BookingStatus = "upcoming" | "past" | "completed" | "cancelled";
  * hydration (which would risk an SSR/client mismatch).
  */
 export function bookingStatus(
-  b: { starts_at: string; cancelled_at: string | null; completed_at: string | null },
+  b: {
+    starts_at: string;
+    cancelled_at: string | null;
+    completed_at: string | null;
+  },
   now: number,
 ): BookingStatus {
   if (b.cancelled_at) return "cancelled";
@@ -33,19 +56,34 @@ export function formatSlot(iso: string): string {
   return slotFmt.format(new Date(iso));
 }
 
+/** The ways the interactive booking list can be ordered. */
+export type SortMode = "lifecycle" | "soonest" | "latest";
+
+export const SORT_LABEL: Record<SortMode, string> = {
+  lifecycle: "Upcoming first",
+  soonest: "Date (soonest)",
+  latest: "Date (latest)",
+};
+
 /**
- * List ordering shared by every section: upcoming bookings first (soonest at
+ * Client-side ordering for the interactive list, keyed off the same fields the
+ * list carries. "lifecycle" is the default: upcoming bookings first (soonest at
  * the top), then everything settled (past/completed/cancelled) newest-first.
+ * The others are a plain chronological sort in either direction.
  */
-export function sortByLifecycle<T extends { starts_at: string; status: BookingStatus }>(
-  items: T[],
-): T[] {
+export function sortBookings<
+  T extends { startsAt: string; status: BookingStatus },
+>(items: T[], mode: SortMode): T[] {
+  const time = (iso: string) => new Date(iso).getTime();
   return [...items].sort((a, b) => {
+    if (mode === "soonest") return time(a.startsAt) - time(b.startsAt);
+    if (mode === "latest") return time(b.startsAt) - time(a.startsAt);
+    // lifecycle
     const ga = a.status === "upcoming" ? 0 : 1;
     const gb = b.status === "upcoming" ? 0 : 1;
     if (ga !== gb) return ga - gb;
-    const ta = new Date(a.starts_at).getTime();
-    const tb = new Date(b.starts_at).getTime();
-    return ga === 0 ? ta - tb : tb - ta;
+    return ga === 0
+      ? time(a.startsAt) - time(b.startsAt)
+      : time(b.startsAt) - time(a.startsAt);
   });
 }

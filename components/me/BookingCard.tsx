@@ -1,16 +1,16 @@
 import { CalendarClock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatSlot, type BookingStatus } from "./booking-utils";
+import { formatSlot, STATUS_LABEL, type BookingStatus } from "./booking-utils";
 
-const STATUS: Record<
+const STATUS_VARIANT: Record<
   BookingStatus,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  "default" | "secondary" | "destructive" | "outline"
 > = {
-  upcoming: { label: "Upcoming", variant: "secondary" },
-  past: { label: "Awaiting completion", variant: "outline" },
-  completed: { label: "Completed", variant: "default" },
-  cancelled: { label: "Cancelled", variant: "destructive" },
+  upcoming: "secondary",
+  past: "outline",
+  completed: "default",
+  cancelled: "destructive",
 };
 
 /**
@@ -30,8 +30,6 @@ export function BookingCard({
   details: React.ReactNode;
   actions?: React.ReactNode;
 }) {
-  const s = STATUS[status];
-
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 p-4">
@@ -42,11 +40,13 @@ export function BookingCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <p className="font-medium">{formatSlot(startsAt)}</p>
-              <Badge variant={s.variant} className="shrink-0">
-                {s.label}
+              <Badge variant={STATUS_VARIANT[status]} className="shrink-0">
+                {STATUS_LABEL[status]}
               </Badge>
             </div>
-            <div className="mt-0.5 text-sm text-muted-foreground">{details}</div>
+            <div className="mt-0.5 text-sm text-muted-foreground">
+              {details}
+            </div>
           </div>
         </div>
         {actions}

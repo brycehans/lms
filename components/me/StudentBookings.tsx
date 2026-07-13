@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarSync, Check, Undo2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BookingCard } from "./BookingCard";
+import { BookingList } from "./BookingList";
 import { formatSlot, type BookingStatus } from "./booking-utils";
 
 export type StudentBooking = {
@@ -38,6 +39,15 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A transient success confirmation (e.g. after a reschedule). The card itself
+  // moves to its new sorted position on refresh, so this line names what changed
+  // and then clears itself.
+  const [success, setSuccess] = useState<string | null>(null);
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => setSuccess(null), 4000);
+    return () => clearTimeout(t);
+  }, [success]);
 
   // Reschedule panel state (only one open at a time).
   const [openId, setOpenId] = useState<string | null>(null);
@@ -47,18 +57,15 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
   );
   const [chosen, setChosen] = useState<string>("");
 
-  if (items.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        You haven&apos;t booked any consultations yet. Pick a slot on the home
-        page to book one.
-      </p>
-    );
-  }
-
-  async function mutate(url: string, body: unknown, id: string) {
+  async function mutate(
+    url: string,
+    body: unknown,
+    id: string,
+    successMsg: string,
+  ) {
     setBusyId(id);
     setError(null);
+    setSuccess(null);
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -71,6 +78,7 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
         return false;
       }
       router.refresh();
+      setSuccess(successMsg);
       return true;
     } catch {
       setError("Network error. Please try again.");
@@ -84,6 +92,7 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
     setOpenId(startsAt);
     setChosen("");
     setError(null);
+    setSuccess(null);
     setSlotsStatus("loading");
     const now = Date.now();
     const from = new Date(now).toISOString();
@@ -110,149 +119,180 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
     setSlotsStatus("idle");
   }
 
-  return (
-    <div className="space-y-3">
-      {items.map((b) => {
-        const busy = busyId === b.id;
-        const isOpen = openId === b.starts_at;
+  const listItems = items.map((b) => {
+    const busy = busyId === b.id;
+    const isOpen = openId === b.starts_at;
 
-        return (
-          <BookingCard
-            key={b.id}
-            startsAt={b.starts_at}
-            status={b.status}
-            details={
-              <>
-                with time traveller{" "}
-                <span className="text-foreground">{b.travellerName}</span>
-                <span className="mt-1 block truncate">{b.reason}</span>
-              </>
-            }
-            actions={
-              <div className="flex flex-col gap-2 border-t pt-3">
-                <div className="flex flex-wrap gap-2">
-                  {b.status === "upcoming" && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() =>
-                          isOpen ? setOpenId(null) : openReschedule(b.starts_at)
-                        }
-                      >
-                        <CalendarSync size={15} />
-                        Reschedule
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() =>
-                          mutate(
-                            "/api/bookings/cancel",
-                            { startsAt: b.starts_at },
-                            b.id,
-                          )
-                        }
-                      >
-                        <X size={15} />
-                        Cancel
-                      </Button>
-                    </>
-                  )}
-                  {b.status === "past" && (
+    return {
+      id: b.id,
+      startsAt: b.starts_at,
+      status: b.status,
+      card: (
+        <BookingCard
+          startsAt={b.starts_at}
+          status={b.status}
+          details={
+            <>
+              with time traveller{" "}
+              <span className="text-foreground">{b.travellerName}</span>
+              <span className="mt-1 block truncate">{b.reason}</span>
+            </>
+          }
+          actions={
+            <div className="flex flex-col gap-2 border-t pt-3">
+              <div className="flex flex-wrap gap-2">
+                {b.status === "upcoming" && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() =>
+                        isOpen ? setOpenId(null) : openReschedule(b.starts_at)
+                      }
+                    >
+                      <CalendarSync size={15} />
+                      Reschedule
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={busy}
                       onClick={() =>
                         mutate(
-                          "/api/bookings/complete",
-                          { bookingId: b.id, isComplete: true },
+                          "/api/bookings/cancel",
+                          { startsAt: b.starts_at },
                           b.id,
+                          "Consultation cancelled.",
                         )
                       }
                     >
-                      <Check size={15} />
-                      Mark complete
+                      <X size={15} />
+                      Cancel
                     </Button>
-                  )}
-                  {b.status === "completed" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() =>
-                        mutate(
-                          "/api/bookings/complete",
-                          { bookingId: b.id, isComplete: false },
-                          b.id,
-                        )
-                      }
-                    >
-                      <Undo2 size={15} />
-                      Mark not complete
-                    </Button>
-                  )}
-                </div>
-
-                {isOpen && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {slotsStatus === "loading" && (
-                      <span className="text-sm text-muted-foreground">
-                        Loading available slots…
-                      </span>
-                    )}
-                    {slotsStatus === "error" && (
-                      <span className="text-sm text-muted-foreground">
-                        Couldn&apos;t load availability. Please try again.
-                      </span>
-                    )}
-                    {slotsStatus === "idle" && slots.length === 0 && (
-                      <span className="text-sm text-muted-foreground">
-                        No other slots are free in the next{" "}
-                        {RESCHEDULE_WINDOW_DAYS} days.
-                      </span>
-                    )}
-                    {slotsStatus === "idle" && slots.length > 0 && (
-                      <>
-                        <Select value={chosen} onValueChange={setChosen}>
-                          <SelectTrigger size="sm" className="min-w-[16rem]">
-                            <SelectValue placeholder="Pick a new time…" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {slots.map((s) => (
-                              <SelectItem key={s.iso} value={s.iso}>
-                                {s.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="sm"
-                          disabled={busy || !chosen}
-                          onClick={async () => {
-                            const ok = await mutate(
-                              "/api/bookings/reschedule",
-                              { currentStart: b.starts_at, newStart: chosen },
-                              b.id,
-                            );
-                            if (ok) setOpenId(null);
-                          }}
-                        >
-                          Confirm move
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                  </>
+                )}
+                {b.status === "past" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      mutate(
+                        "/api/bookings/complete",
+                        { bookingId: b.id, isComplete: true },
+                        b.id,
+                        "Marked as complete.",
+                      )
+                    }
+                  >
+                    <Check size={15} />
+                    Mark complete
+                  </Button>
+                )}
+                {b.status === "completed" && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      mutate(
+                        "/api/bookings/complete",
+                        { bookingId: b.id, isComplete: false },
+                        b.id,
+                        "Marked as not complete.",
+                      )
+                    }
+                  >
+                    <Undo2 size={15} />
+                    Mark not complete
+                  </Button>
                 )}
               </div>
-            }
-          />
-        );
-      })}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+
+              {isOpen && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {slotsStatus === "loading" && (
+                    <span className="text-sm text-muted-foreground">
+                      Loading available slots…
+                    </span>
+                  )}
+                  {slotsStatus === "error" && (
+                    <span className="text-sm text-muted-foreground">
+                      Couldn&apos;t load availability. Please try again.
+                    </span>
+                  )}
+                  {slotsStatus === "idle" && slots.length === 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      No other slots are free in the next{" "}
+                      {RESCHEDULE_WINDOW_DAYS} days.
+                    </span>
+                  )}
+                  {slotsStatus === "idle" && slots.length > 0 && (
+                    <>
+                      <Select value={chosen} onValueChange={setChosen}>
+                        <SelectTrigger size="sm" className="min-w-[16rem]">
+                          <SelectValue placeholder="Pick a new time…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {slots.map((s) => (
+                            <SelectItem key={s.iso} value={s.iso}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        disabled={busy || !chosen}
+                        onClick={async () => {
+                          const label = slots.find(
+                            (s) => s.iso === chosen,
+                          )?.label;
+                          const ok = await mutate(
+                            "/api/bookings/reschedule",
+                            { currentStart: b.starts_at, newStart: chosen },
+                            b.id,
+                            label
+                              ? `Consultation moved to ${label}.`
+                              : "Consultation rescheduled.",
+                          );
+                          if (ok) setOpenId(null);
+                        }}
+                      >
+                        Confirm move
+                      </Button>
+                    </>
+                  )}
+                  {/* Reschedule failure shows here, next to the picker, so the
+                        student can immediately pick another slot. Other actions'
+                        errors surface at the bottom of the list. */}
+                  {error && (
+                    <p className="w-full text-sm text-destructive">{error}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          }
+        />
+      ),
+    };
+  });
+
+  return (
+    <div className="space-y-3">
+      <BookingList
+        items={listItems}
+        emptyMessage="You haven't booked any consultations yet. Pick a slot on the home page to book one."
+      />
+      {/* When a reschedule panel is open its own error renders inline (above);
+          this covers the instant cancel/complete actions instead. */}
+      {!openId && error && <p className="text-sm text-destructive">{error}</p>}
+      {success && (
+        <p className="text-sm text-emerald-600 dark:text-emerald-400">
+          {success}
+        </p>
+      )}
     </div>
   );
 }
