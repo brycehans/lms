@@ -1,4 +1,5 @@
 {
+  "biome.enabled": false,
   "[sql]": {
     "editor.defaultFormatter": "bradymholt.pgformatter",
     "editor.formatOnSave": true
