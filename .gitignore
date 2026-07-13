@@ -48,4 +48,3 @@ docs/code-review-2026-07-13.md
 *.tsbuildinfo
 next-env.d.ts
 toolgate.config.local.ts
-.env*

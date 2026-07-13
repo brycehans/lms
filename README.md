@@ -10,15 +10,25 @@ pattern), and the whole design turns on one rule — see [Architecture](#archite
 
 ## Quick start
 
+One command on a fresh clone — needs Docker running and `pnpm` installed:
+
 ```bash
-pnpm install
-cp .env.example .env.local   # local Supabase defaults — works as-is
-pnpm dev                     # boots local Supabase (docker) AND next dev together
+./scripts/setup.sh
 ```
 
-Requires Docker running (for the local Supabase stack). The values in
-`.env.example` are the local stack's fixed dev defaults, so the copy above is all
-the config a clone needs.
+It checks prerequisites, installs dependencies, brings up a fully seeded local
+Supabase stack (`supabase start` + `db reset`), and launches the dev server. Or
+run the steps yourself:
+
+```bash
+pnpm install
+pnpm dev        # boots local Supabase (docker) + next dev, wired together
+```
+
+Local dev needs **no** env file: `pnpm dev` (`scripts/dev.mjs`) reads the running
+stack's URL + publishable key live and defaults the demo-login flags. Copy
+`.env.example` to `.env.local` only to override something (e.g. to point the local
+app at a hosted Supabase).
 
 - App: [localhost:3000](http://localhost:3000)
 - Supabase Studio: [localhost:54323](http://localhost:54323) · API on `:54321` · db on `:54322`
@@ -31,8 +41,8 @@ admin, superadmin), seeded deterministically by `supabase/seed.sql`.
 > (all its API calls are relative). The Supabase stack is *not*: `supabase start`
 > binds the fixed ports in `supabase/config.toml` (`54321` API, `54322` db,
 > `54323` studio, plus `54320`/`54324`/`54329`) and fails if one is taken. To
-> relocate, change the port in `config.toml` **and**, for the API port, the
-> matching `NEXT_PUBLIC_SUPABASE_URL` in `.env.local` (the two must agree).
+> relocate, change the port in `config.toml` **only** — `pnpm dev` reads whatever
+> the running stack reports, so nothing else needs editing.
 
 > **Local dev:** use Chrome. Firefox hits an upstream Next 16.2.10 dev-only reload
 > loop on pages with dynamic content (e.g. `/me`); see the note in `CLAUDE.md`.
