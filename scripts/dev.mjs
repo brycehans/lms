@@ -77,8 +77,10 @@ const derived = {
   NEXT_PUBLIC_SUPABASE_URL: reported.API_URL,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: reported.PUBLISHABLE_KEY,
   // Local-dev demo defaults (reviewer quick-login). Override in .env.local.
+  // The password must match seed.sql's local-only fallback so seeded accounts
+  // are loggable; it is a throwaway LOCAL value, not any hosted secret.
   NEXT_PUBLIC_DEMO_LOGINS: "true",
-  NEXT_PUBLIC_DEMO_PASSWORD: "prophecy",
+  NEXT_PUBLIC_DEMO_PASSWORD: "localdev",
 };
 for (const [k, v] of Object.entries(derived)) {
   if (v && !explicit[k]) process.env[k] = v;

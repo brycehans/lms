@@ -66,7 +66,7 @@ These carry secrets, so they are set in Vercel only — not committed. With the
 printf '%s' 'https://<ref>.supabase.co'        | vercel env add NEXT_PUBLIC_SUPABASE_URL production
 printf '%s' '<publishable-or-anon-key>'        | vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production
 printf '%s' 'true'                             | vercel env add NEXT_PUBLIC_DEMO_LOGINS production
-printf '%s' 'prophecy'                         | vercel env add NEXT_PUBLIC_DEMO_PASSWORD production
+printf '%s' '<demo-password>'                  | vercel env add NEXT_PUBLIC_DEMO_PASSWORD production
 printf '%s' '<user>:<password>'                | vercel env add DEMO_BASIC_AUTH production
 ```
 
@@ -75,7 +75,7 @@ printf '%s' '<user>:<password>'                | vercel env add DEMO_BASIC_AUTH 
 | `NEXT_PUBLIC_SUPABASE_URL` | hosted project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | hosted project publishable / anon key (non-secret by design) |
 | `NEXT_PUBLIC_DEMO_LOGINS` | `true` to show the one-click Quick-login panel (demo only) |
-| `NEXT_PUBLIC_DEMO_PASSWORD` | shared demo password; must match the seed (default `prophecy`) |
+| `NEXT_PUBLIC_DEMO_PASSWORD` | shared demo password; must match the password you seed on the host (via the `app.demo_password` GUC). Pick a real value here — never the repo's local-dev default — and don't commit it. |
 | `DEMO_BASIC_AUTH` | `user:password` — turns on the site-wide Basic Auth edge gate (see below). Server-only; **no** `NEXT_PUBLIC_` prefix. Keep the value out of the repo, or the gate is pointless. |
 
 `NEXT_PUBLIC_*` values are inlined at **build time**, so set these before the
@@ -95,11 +95,14 @@ just the ordinary form.
   seeded account's email and the shared demo password. There is **no
   impersonation endpoint and no service-role code path** — it's the exact auth
   flow a real user takes, so sessions, cookies, and RLS all behave identically.
-- The password is the same for every seeded account. It is env-driven on both
-  sides and defaults to `prophecy`:
-  - **DB**: `seed.sql` hashes `coalesce(current_setting('app.demo_password', true), 'prophecy')` into `auth.users.encrypted_password`.
-  - **Client**: `QuickLogin` sends `NEXT_PUBLIC_DEMO_PASSWORD ?? 'prophecy'`.
-  These two **must match**, or sign-in fails.
+- The password is the same for every seeded account and is **env-driven on both
+  sides** — no default value is committed:
+  - **DB**: `seed.sql` hashes `current_setting('app.demo_password', …)` into
+    `auth.users.encrypted_password`, falling back to a throwaway *local-dev*
+    value only for `db reset`. On a host, pass a real secret via the GUC.
+  - **Client**: `QuickLogin` sends `NEXT_PUBLIC_DEMO_PASSWORD` (no fallback — the
+    panel no-ops if it's unset).
+  The DB value and `NEXT_PUBLIC_DEMO_PASSWORD` **must match**, or sign-in fails.
 
 ### Security posture
 

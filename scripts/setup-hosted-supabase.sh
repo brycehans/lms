@@ -40,12 +40,28 @@ pnpm exec supabase db push --linked --yes
 # --- 2. Seed -------------------------------------------------------------------
 # IMPORTANT: use `db query`, not `db push --include-seed`. The latter tracks the
 # seed by content-hash and SKIPS execution when the hash already matches — which
-# silently leaves the demo accounts without the crypt('prophecy', ...) password
-# and makes every login fail with `invalid_credentials`. `db query` always runs
-# the file, and seed.sql opens with `delete from auth.users` so it is a clean,
-# deterministic reset every time.
+# silently leaves the demo accounts without a hashed password and makes every
+# login fail with `invalid_credentials`. `db query` always runs the file, and
+# seed.sql opens with `delete from auth.users` so it is a clean, deterministic
+# reset every time.
+#
+# The demo password comes from the DEMO_PASSWORD env var (never committed) and is
+# passed to the seed as the `app.demo_password` GUC, so it matches whatever you
+# set for NEXT_PUBLIC_DEMO_PASSWORD in Vercel. If unset, the seed falls back to
+# its throwaway local-dev default — which will NOT match a hosted Vercel value.
 echo "==> Seeding (forced execution)"
-pnpm exec supabase db query --linked -f supabase/seed.sql >/dev/null
+if [ -n "${DEMO_PASSWORD:-}" ]; then
+  esc=${DEMO_PASSWORD//\'/\'\'} # double single-quotes for the SQL string literal
+  tmp="$(mktemp)"
+  printf "select set_config('app.demo_password', '%s', false);\n" "$esc" > "$tmp"
+  cat supabase/seed.sql >> "$tmp"
+  pnpm exec supabase db query --linked -f "$tmp" >/dev/null
+  rm -f "$tmp"
+else
+  echo "    WARN: DEMO_PASSWORD not set — seeding with seed.sql's local-dev" >&2
+  echo "          default, which won't match a hosted NEXT_PUBLIC_DEMO_PASSWORD." >&2
+  pnpm exec supabase db query --linked -f supabase/seed.sql >/dev/null
+fi
 echo "    seeded"
 
 # --- 3. Auth config ------------------------------------------------------------

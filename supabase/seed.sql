@@ -76,10 +76,11 @@ from
 -- edge (DB firewalled to Vercel + Vercel access protection), not here.
 --
 -- The password is env-driven: it reads the `app.demo_password` session setting,
--- falling back to 'prophecy'. Local `db reset` uses the default; to override on
--- hosted, run with the GUC set, e.g.
+-- falling back to a LOCAL-only dev default ('localdev') so `db reset` produces
+-- loggable accounts with zero config. For any SHARED/HOSTED db, set the GUC to a
+-- real secret (never commit it), e.g.
 --   PGOPTIONS="-c app.demo_password=yourpw" psql "$DB_URL" -f supabase/seed.sql
--- Keep it in sync with the client's NEXT_PUBLIC_DEMO_PASSWORD.
+-- Keep whatever you use in sync with the client's NEXT_PUBLIC_DEMO_PASSWORD.
 --
 -- Also blank the token columns: a direct insert leaves them NULL, but GoTrue
 -- scans them as non-null strings when authenticating, so a real login otherwise
@@ -87,7 +88,7 @@ from
 -- accounts had never actually logged in.)
 update auth.users
   set encrypted_password = extensions.crypt(
-      coalesce(current_setting('app.demo_password', true), 'prophecy'),
+      coalesce(current_setting('app.demo_password', true), 'localdev'),
       extensions.gen_salt('bf')),
     confirmation_token = '',
     recovery_token = '',
