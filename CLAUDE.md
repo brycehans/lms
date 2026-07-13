@@ -9,7 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-pnpm dev         # starts local Supabase (docker) AND next dev together
+pnpm dev         # starts local Supabase (docker) AND next dev together (app on :1955)
+pnpm teardown    # stops Supabase + wipes db volumes + removes derived files (node_modules, .next, local env) → fresh-clone state. Flags: --dry-run, --yes, --keep-env
 pnpm build       # next build
 pnpm typecheck   # tsc --noEmit — the reliable pre-commit check
 pnpm lint        # eslint . — currently BROKEN (eslint-config-next 15.3.1 vs ESLint 9 flat-config); use typecheck instead

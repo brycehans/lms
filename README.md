@@ -80,6 +80,12 @@ stack's URL + publishable key live and defaults the demo-login flags. Copy
 `.env.example` to `.env.local` only to override something (e.g. to point the local
 app at a hosted Supabase).
 
+To go the other way — back to a fresh-clone state — run `pnpm teardown`. It stops
+the Supabase stack (discarding the db volumes), then removes derived state
+(`node_modules`, `.next`, local env files, Supabase caches); `pnpm install && pnpm dev`
+rehydrates from scratch. It prompts before deleting; `--dry-run` previews,
+`--yes` skips the prompt, `--keep-env` preserves your `.env`/`.env.local`.
+
 - App: [localhost:1955](http://localhost:1955)
 - Supabase Studio: [localhost:54323](http://localhost:54323) · API on `:54321` · db on `:54322`
 
@@ -122,6 +128,7 @@ app at a hosted Supabase).
 ```bash
 pnpm typecheck                 # tsc --noEmit — the reliable pre-commit gate
 pnpm build                     # next build
+pnpm teardown                  # stop stack + wipe db + remove derived files → fresh-clone state
 pnpm supabase db reset         # drop, re-run ALL migrations, then seed.sql (local rebuild)
 pnpm supabase migration new X  # scaffold a timestamped migration
 ```
