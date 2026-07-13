@@ -13,7 +13,7 @@ pnpm dev         # starts local Supabase (docker) AND next dev together (app on 
 pnpm teardown    # stops Supabase + wipes db volumes + removes derived files (node_modules, .next, local env) → fresh-clone state. Flags: --dry-run, --yes, --keep-env
 pnpm build       # next build
 pnpm typecheck   # tsc --noEmit — the reliable pre-commit check
-pnpm lint        # eslint . — currently BROKEN (eslint-config-next 15.3.1 vs ESLint 9 flat-config); use typecheck instead
+pnpm lint        # eslint . — works (eslint-config-next pinned in lockstep with next, loaded as flat config). Passes with 0 errors; a few React-Compiler rules are warnings by design (see eslint.config.mjs)
 ```
 
 Supabase (CLI pinned in devDependencies — invoke via `pnpm supabase …` or `npx supabase …`):
@@ -29,12 +29,13 @@ There is no test suite. Backend correctness is verified by hand against the loca
 
 ## Architecture — the security model is the whole point
 
-This is a server-mediated Supabase app, which is deliberately *not* the default Supabase pattern. The one rule everything follows:
+This is a server-mediated Supabase app, which is deliberately _not_ the default Supabase pattern. The one rule everything follows:
 
 - **Reads**: Server Components call the Supabase SDK directly. **RLS policies** scope what each role sees — there is no hand-written authz in the app layer for reads.
-- **Writes**: go through **Next.js API Route Handlers** (`app/api/**/route.ts`) that call `SECURITY DEFINER` **RPCs**. This is the *only* client-writable surface. There are deliberately **no INSERT/UPDATE/DELETE RLS policies** on the tables — mutation is impossible except through a vetted RPC.
+- **Writes**: go through **Next.js API Route Handlers** (`app/api/**/route.ts`) that call `SECURITY DEFINER` **RPCs**. This is the _only_ client-writable surface. There are deliberately **no INSERT/UPDATE/DELETE RLS policies** on the tables — mutation is impossible except through a vetted RPC.
 
 Consequences to keep in mind:
+
 - Never add table-level write policies to "make a mutation work." Add or extend an RPC instead.
 - RLS only matters for reads. RPCs bypass RLS (they run as definer), so each RPC must enforce its own invariants internally (`auth.uid()` checks, busy-checks, business-hours domains, etc.).
 - Route handlers use the cookie-aware server client (`lib/supabase/server.ts`), which writes refreshed auth cookies onto the response. Do not call Supabase auth from a bare client on the server.
@@ -80,3 +81,23 @@ Local Supabase (`127.0.0.1:54321`) is unreachable from a hosted deploy. See `dep
   vercel/next.js#94128 (in `16.3.0-canary.30`); stable `latest` is still 16.2.10,
   so the mitigation stays until 16.3 ships stable. Investigation record in
   `docs/bug-reports/nextjs-firefox-debug-channel-reload-loop.md` (marked do-not-file).
+
+> [!NOTE]
+> The quick-login password is env-driven and defaults to `localdev` on both
+> sides with zero config — `pnpm dev` injects `NEXT_PUBLIC_DEMO_PASSWORD=localdev`
+> and `seed.sql` hashes the same fallback. If you set a **custom**
+> `NEXT_PUBLIC_DEMO_PASSWORD` in `.env.local`, you must seed the DB with the
+> matching value (`PGOPTIONS="-c app.demo_password=<pw>"`), because a plain
+> `supabase db reset` always reseeds with `localdev` and would desync from your
+> override — sign-in then fails with `invalid_credentials`.
+
+> **Port conflicts.** The Next server runs on a fixed, uncommon port (`1955`) so
+> it matches the auth redirect allow-list in `supabase/config.toml` and rarely
+> clashes on a fresh machine. If `1955` _is_ taken, override it with
+> `pnpm dev -p <port>` (or `PORT=<port> pnpm dev`); update `site_url` /
+> `additional_redirect_urls` in `config.toml` to match only if you exercise auth
+> email/OAuth redirects. The Supabase stack binds the fixed ports in
+> `config.toml` (`54321` API, `54322` db, `54323` studio, plus
+> `54320`/`54324`/`54329`) and fails if one is taken. To relocate the stack,
+> change the port in `config.toml` **only** — `pnpm dev` reads whatever the
+> running stack reports, so nothing else needs editing.
