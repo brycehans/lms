@@ -9,10 +9,17 @@ then come back to the present and tell you how you scored.
 
 It happens in three steps:
 
+![How it works — book a consultation, they travel to the future, they report back](./docs/images/how-it-works.png)
+
 1. **Book a consultation.** Pick an open slot and hand over your course details.
 2. **They travel to the future.** A traveller slips through a swirling green
    portal to the day your exam results go up.
 3. **They report back.** They return with the prophecy — your grade, revealed.
+
+> [!NOTE]
+> **Live demo:** a hosted version runs at
+> [lms.brycehanscomb.com](https://lms.brycehanscomb.com). The one-click persona
+> logins sit behind a site-wide HTTP Basic Auth gate (see [Deploy](#deploy)).
 
 It's a real multi-tenant scheduling app: four personas,
 role-scoped views, a full booking lifecycle, and an engine that refuses to
@@ -22,14 +29,7 @@ local Supabase (Postgres 17) in Docker — and yes, the dev server runs on port
 
 ![We're going back to 1955](./docs/images/localhost-1955.jpeg)
 
-> [!NOTE]
-> **Live demo:** a hosted version runs at
-> [lms.brycehanscomb.com](https://lms.brycehanscomb.com). The one-click persona
-> logins sit behind a site-wide HTTP Basic Auth gate (see [Deploy](#deploy)).
-
 ## What it does
-
-![How it works — book a consultation, they travel to the future, they report back](./docs/images/how-it-works.png)
 
 - **Students** consult the emerald availability calendar, book a session into a
   valid business-hours slot, and manage it afterwards — reschedule, cancel, or
@@ -60,13 +60,7 @@ logins for each persona.
 > [!TIP]
 > **Deep-linkable slots that survive login.** Every open slot on the calendar is
 > a real link — `/book?start_at=<ISO timestamp>` — that preloads the booking form
-> with that time already selected. Follow one while signed out and the slot isn't
-> lost: it round-trips through the login page as a `next` parameter (see
-> `safeNext` + the login form), so after signing in you land back on that exact
-> deep-link with your slot still chosen. The slot is only a _prefill_ — the time
-> the student actually confirms is what `create_booking` validates and snapshots.
-
-![The public roster of time travellers](./docs/images/traveller-roster.png)
+> with that time already selected. If a user has to sign in first, the session will remember the booking time they asked for when returning from login to the booking form.
 
 ## Security Model
 
@@ -125,12 +119,11 @@ pnpm supabase db reset         # drop, re-run ALL migrations, then seed.sql (loc
 pnpm supabase migration new X  # scaffold a timestamped migration
 ```
 
-Tests target the layer that matters here — the security model. The **pgTAP suite**
-(`supabase/tests/`, `pnpm test:db`) exercises the RLS read policies and every RPC's
-invariants under a role-impersonation rig; a **two-session shell test**
-(`pnpm test:contention`) covers the per-slot advisory lock's concurrency behaviour;
-and **vitest** (`pnpm test:unit`) covers the thin HTTP contract of the API route
-handlers. The DB tiers need the local stack running. See `supabase/tests/README.md`.
+## Test Coverage
+
+- **pgTAP suite** exercises the RLS read policies and every RPC's invariants under a role-impersonation rig;
+- **two-session shell test** covers the per-slot advisory lock's concurrency behaviour;
+- **vitest** covers API route contracts
 
 ## Architecture
 
