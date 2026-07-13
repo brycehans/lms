@@ -3,9 +3,6 @@
 # One-command spinup for a fresh clone: prerequisites -> deps -> a fully seeded
 # local Supabase stack -> the dev server.
 #
-# Run it WITHOUT pnpm — that's the point: it verifies pnpm (and Docker/node) are
-# present and reports a clear install pointer if not, so it can't be `pnpm <x>`.
-#
 #   ./scripts/setup.sh          # or: bash scripts/setup.sh
 #
 # Idempotent and safe to re-run: `supabase db reset` brings the local db to the
@@ -42,7 +39,16 @@ pnpm install --frozen-lockfile
 # stale volume already exists — a plain `start` only seeds a brand-new volume,
 # which is the classic "why is the roster empty?" trap on a re-clone.
 echo "==> Starting local Supabase (first run pulls images — be patient)"
-pnpm exec supabase start
+# A healthy already-running stack for THIS project returns success here (the CLI
+# recognises its own containers), so a failure means one of two real problems:
+if ! pnpm exec supabase start; then
+  echo "    ERROR: 'supabase start' failed." >&2
+  echo "    - If this project's own stack is wedged: pnpm exec supabase stop, then retry." >&2
+  echo "    - If a DIFFERENT service holds a port: change it in supabase/config.toml" >&2
+  echo "      (defaults 54321 API, 54322 db, 54323 studio, plus 54320/54324/54329) —" >&2
+  echo "      'pnpm dev' follows config.toml, so nothing else needs editing." >&2
+  exit 1
+fi
 echo "==> Applying migrations + seed (deterministic demo data)"
 pnpm exec supabase db reset
 
@@ -50,5 +56,5 @@ pnpm exec supabase db reset
 # Hand off to the dev launcher (scripts/dev.mjs): it re-checks Supabase (a fast
 # no-op now), wires the app to the stack's reported URL/key, and starts Next.
 # exec so Ctrl-C stops Next cleanly; Supabase keeps running in the background.
-echo "==> Launching the app — http://localhost:3000"
+echo "==> Launching the app now..."
 exec pnpm dev
