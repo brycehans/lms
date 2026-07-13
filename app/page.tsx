@@ -11,7 +11,7 @@ import { TravellerIndex } from "@/components/home/TravellerIndex";
 import { BrandMark } from "@/components/BrandMark";
 import { Starfield } from "@/components/home/Starfield";
 import { HowItWorks } from "@/components/HowItWorks";
-import { MoonStar, Sparkles, ArrowBigDown } from "lucide-react";
+import { MoonStar, Sparkles, ArrowBigDown, User2Icon } from "lucide-react";
 
 /**
  * The identity + upcoming-bookings sections read auth cookies (uncached), so
@@ -59,8 +59,12 @@ export default function Home() {
               </h1>
               <p className="max-w-2xl text-lg text-muted-foreground">
                 Stop guessing your final grade. Book a one-hour consultation
-                with a certified time traveller who&apos;ll gaze into your exam
-                results and tell you exactly what you scored.
+                with a{" "}
+                <span className="font-bold whitespace-nowrap">
+                  certified time traveller
+                </span>{" "}
+                who&apos;ll gaze into your exam results and tell you exactly
+                what you scored.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 <a
@@ -69,6 +73,16 @@ export default function Home() {
                 >
                   <ArrowBigDown size={18} />
                   Book a consultation
+                </a>
+                &middot;
+                <a
+                  href="/me"
+                  className={buttonVariants({
+                    size: "lg",
+                  })}
+                >
+                  <User2Icon size={18} />
+                  View my bookings &amp; profile
                 </a>
               </div>
             </div>
@@ -83,17 +97,11 @@ export default function Home() {
           <HowItWorks />
 
           <Suspense>
-            <AccountSections />
-          </Suspense>
-
-          <Suspense>
-            <div id="universities" className="hash-target">
-              <UniversitiesList />
-            </div>
-          </Suspense>
-
-          <Suspense>
             <TravellerIndex />
+          </Suspense>
+
+          <Suspense>
+            <UniversitiesList />
           </Suspense>
         </div>
 
