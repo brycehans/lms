@@ -1,5 +1,7 @@
 # 🔮 Course Prophecies
 
+[![CI](https://github.com/brycehans/lms/actions/workflows/ci.yml/badge.svg)](https://github.com/brycehans/lms/actions/workflows/ci.yml)
+
 **Course Prophecies** is a
 mini-LMS with a twist: instead of tutors, students book one-hour consultations
 with **certified time travellers** who go into the future to find out your grade
