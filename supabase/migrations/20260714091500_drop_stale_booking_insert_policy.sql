@@ -1,0 +1,14 @@
+-- Remove the stale direct-INSERT policy on bookings.
+--
+-- book_only_for_yourself_wall_policy (20260711011425) predates the RPC-only write
+-- model. It is currently INERT: `authenticated` has no INSERT privilege on
+-- bookings (only SELECT — see 20260713015525), and Postgres requires BOTH a table
+-- grant AND a permissive policy to insert, so the policy can never fire. Verified
+-- against the running DB: authenticated's grants on bookings are
+-- REFERENCES/SELECT/TRIGGER/TRUNCATE — no INSERT/UPDATE/DELETE.
+--
+-- But it contradicts the documented "mutation only through vetted RPCs" interface
+-- and would silently become a live write bypass if an INSERT grant were ever
+-- added. Drop it so the schema matches the model: no table-level write policies
+-- on bookings. (Read policies are unaffected.)
+drop policy if exists book_only_for_yourself_wall_policy on public.bookings;
