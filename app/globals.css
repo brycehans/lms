@@ -4,57 +4,58 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    /* Fresh, Zendesk-style green theme */
+    --background: 150 33% 99%;
+    --foreground: 165 30% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 165 30% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --popover-foreground: 165 30% 11%;
+    --primary: 152 62% 33%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 30% 95%;
+    --secondary-foreground: 155 40% 20%;
+    --muted: 150 24% 95%;
+    --muted-foreground: 155 12% 40%;
+    --accent: 150 45% 92%;
+    --accent-foreground: 155 55% 22%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 18% 89%;
+    --input: 150 18% 88%;
+    --ring: 152 62% 33%;
+    --chart-1: 152 62% 33%;
+    --chart-2: 168 55% 40%;
+    --chart-3: 135 50% 45%;
+    --chart-4: 185 45% 38%;
+    --chart-5: 100 45% 48%;
+    --radius: 0.65rem;
   }
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 165 30% 7%;
+    --foreground: 150 20% 96%;
+    --card: 165 28% 10%;
+    --card-foreground: 150 20% 96%;
+    --popover: 165 28% 10%;
+    --popover-foreground: 150 20% 96%;
+    --primary: 152 55% 45%;
+    --primary-foreground: 165 40% 8%;
+    --secondary: 160 18% 16%;
+    --secondary-foreground: 150 20% 96%;
+    --muted: 160 15% 16%;
+    --muted-foreground: 150 12% 62%;
+    --accent: 158 25% 18%;
+    --accent-foreground: 150 30% 90%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 160 15% 20%;
+    --input: 160 15% 22%;
+    --ring: 152 55% 45%;
+    --chart-1: 152 55% 48%;
+    --chart-2: 168 50% 50%;
+    --chart-3: 135 45% 52%;
+    --chart-4: 185 42% 48%;
+    --chart-5: 100 42% 55%;
   }
 }
 
@@ -64,5 +65,39 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Smooth-scroll to in-page hash links (unless the user prefers less motion). */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+@layer components {
+  /* A section that can be a hash-link destination: it clears the sticky nav
+     when scrolled to, and lights up with a soft green highlight while it's the
+     active `:target`. The highlight is drawn by a full-bleed `::before` band
+     that breaks out of the max-width column to span the whole viewport — its
+     overflow is clipped by `overflow-x-clip` on the page's <main>. */
+  .hash-target {
+    position: relative;
+    scroll-margin-top: 6rem;
+  }
+  .hash-target::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset-block: -1.5rem;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+    background-color: transparent;
+    transition: background-color 0.4s ease;
+    pointer-events: none;
+  }
+  .hash-target:target::before {
+    background-color: hsl(var(--primary) / 0.07);
   }
 }
