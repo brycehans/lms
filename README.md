@@ -20,6 +20,11 @@ local Supabase (Postgres 17) in Docker — and yes, the dev server runs on port
 
 ![We're going back to 1955](./docs/images/localhost-1955.jpeg)
 
+> [!NOTE]
+> **Live demo:** a hosted version runs at
+> [lms.brycehanscomb.com](https://lms.brycehanscomb.com). The one-click persona
+> logins sit behind a site-wide HTTP Basic Auth gate (see [Deploy](#deploy)).
+
 ## What it does
 
 ![How it works — book a consultation, they travel to the future, they report back](./docs/images/how-it-works.png)
@@ -49,6 +54,15 @@ participating universities, and the week's open slots — with one-click demo
 logins for each persona.
 
 ![The weekly availability calendar: open vs full one-hour slots, Mon–Fri 9am–4pm](./docs/images/availability-calendar.png)
+
+> [!TIP]
+> **Deep-linkable slots that survive login.** Every open slot on the calendar is
+> a real link — `/book?start_at=<ISO timestamp>` — that preloads the booking form
+> with that time already selected. Follow one while signed out and the slot isn't
+> lost: it round-trips through the login page as a `next` parameter (see
+> `safeNext` + the login form), so after signing in you land back on that exact
+> deep-link with your slot still chosen. The slot is only a *prefill* — the time
+> the student actually confirms is what `create_booking` validates and snapshots.
 
 ![The public roster of time travellers](./docs/images/traveller-roster.png)
 
@@ -271,6 +285,10 @@ conversation. Each is marked with a `TRADEOFF OPPORTUNITY` comment in the source
 - **Dependencies pinned loosely.** Runtime deps use `"latest"` ranges (the frozen
   lockfile keeps deploys reproducible), there is one moderate transitive PostCSS
   advisory via Next, and `.mcp.json` runs a dev tool via `npx -y`.
+- **Hand-rolled Basic Auth gate on the demo.** Vercel's built-in password
+  protection would be the cleaner way to gate the hosted demo, but it isn't
+  available on the free Vercel plan — so the demo rolls its own site-wide HTTP
+  Basic Auth gate in `proxy.ts` instead.
 
 These last ones map to findings #6–#10 and #12 in
 `docs/codebase-review-2026-07-13.md`; the verified triage and what was fixed are
