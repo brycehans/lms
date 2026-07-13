@@ -45,12 +45,14 @@ export function HowItWorks() {
                 src={step.img}
                 alt={step.alt}
                 fill
-                placeholder="blur"
                 sizes="(min-width: 640px) 33vw, 100vw"
                 className="object-cover"
-                // Pre-sized, pre-compressed static art (~66 KB webp). Skip the
-                // Next image optimizer — without `sharp` installed it falls back
-                // to a slow, memory-heavy OS pipeline that pegged the CPU.
+                // Pre-sized, pre-compressed static art (~66 KB webp), so:
+                //  - `unoptimized`: skip the runtime image optimizer. Without
+                //    `sharp` it falls back to a slow, memory-heavy OS pipeline.
+                //  - NO `placeholder="blur"`: the bundler generates the blur
+                //    placeholder at compile time via that same sharp-less
+                //    pipeline, which livelocked next-swc (runaway CPU + memory).
                 unoptimized
               />
               <span className="absolute left-3 top-3 inline-flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow">

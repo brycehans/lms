@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { SignUpForm } from "@/components/sign-up-form";
+import { BrandMark } from "@/components/BrandMark";
 import { createClient } from "@/lib/supabase/server";
 import { Suspense } from "react";
+
+export const metadata: Metadata = {
+  title: "Create your account",
+};
 
 async function SignUp() {
   const supabase = await createClient();
@@ -16,13 +22,14 @@ async function SignUp() {
     throw new Error(`Failed to load universities: ${error.message}`);
   }
 
-  return <SignUpForm universities={universities} />;
+  return <SignUpForm universities={universities} className="w-full" />;
 }
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
+    <div className="flex min-h-svh w-full items-center justify-center bg-gradient-to-b from-accent/50 to-background p-6 md:p-10">
+      <div className="flex w-full max-w-sm flex-col items-center gap-6">
+        <BrandMark />
         <Suspense>
           <SignUp />
         </Suspense>

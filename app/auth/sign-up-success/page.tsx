@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { CheckCircle2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -8,7 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { BrandMark } from "@/components/BrandMark";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Account created",
+};
 
 // Reads dynamic (cookie-backed) auth data, so it lives behind a <Suspense>
 // boundary — otherwise awaiting it here blocks the whole route from streaming.
@@ -28,11 +35,15 @@ async function GreetingName() {
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
+    <div className="flex min-h-svh w-full items-center justify-center bg-gradient-to-b from-accent/50 to-background p-6 md:p-10">
+      <div className="flex w-full max-w-sm flex-col items-center gap-6">
+        <BrandMark />
+        <div className="flex w-full flex-col gap-6">
           <Card>
             <CardHeader>
+              <span className="mb-1 inline-flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <CheckCircle2 size={24} />
+              </span>
               <CardTitle className="text-2xl">
                 Thanks
                 <Suspense fallback={null}>
@@ -46,7 +57,7 @@ export default function Page() {
               <p className="text-sm text-muted-foreground">
                 You&apos;re ready to book a consultation with a time traveller.
               </p>
-              <Link href="/book" className={buttonVariants()}>
+              <Link href="/" className={buttonVariants()}>
                 Get started
               </Link>
             </CardContent>
