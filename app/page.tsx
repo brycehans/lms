@@ -76,14 +76,14 @@ export default function Home() {
         </section>
 
         <div className="flex flex-col gap-16 w-full max-w-5xl p-5 py-12">
+          <Suspense>
+            <AvailabilityCalendar />
+          </Suspense>
+
           <HowItWorks />
 
           <Suspense>
             <AccountSections />
-          </Suspense>
-
-          <Suspense>
-            <AvailabilityCalendar />
           </Suspense>
 
           <Suspense>
