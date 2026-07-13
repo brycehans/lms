@@ -36,8 +36,12 @@ type SignUpFormValues = {
 export function SignUpForm({
   universities,
   className,
+  next,
   ...props
-}: React.ComponentPropsWithoutRef<"div"> & { universities: University[] }) {
+}: React.ComponentPropsWithoutRef<"div"> & {
+  universities: University[];
+  next?: string;
+}) {
   const router = useRouter();
   const {
     register,
@@ -73,7 +77,13 @@ export function SignUpForm({
         throw new Error(error ?? "An error occurred");
       }
 
-      router.push("/auth/sign-up-success");
+      // Signup leaves the user logged in (email confirmations off), so carry the
+      // booking deep-link onto the success page — its CTA continues the booking.
+      router.push(
+        next
+          ? `/auth/sign-up-success?next=${encodeURIComponent(next)}`
+          : "/auth/sign-up-success",
+      );
     } catch (error: unknown) {
       setError("root", {
         message: error instanceof Error ? error.message : "An error occurred",
@@ -174,6 +184,11 @@ export function SignUpForm({
                     </Select>
                   )}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Why do I have to specify my uni? Administrators are
+                  per-university, so this lets us demonstrate the app&apos;s
+                  tenancy model.
+                </p>
               </div>
               {errors.root && (
                 <p className="text-sm text-red-500">{errors.root.message}</p>
