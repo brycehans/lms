@@ -17,6 +17,58 @@
 </p>
 <br/>
 
+## Sitemap
+
+Reads are **Server Components** hitting the Supabase SDK directly (RLS scopes what
+each role sees). Mutations go through **API Route Handlers** that call `SECURITY
+DEFINER` RPCs — the only client-writable surface (no direct table DML).
+
+Legend: ✅ built · 🔲 to build · ⚙️ starter-kit sample (not part of the app)
+
+### Pages
+
+```
+/                       ✅ public landing (availability calendar, traveller roster, universities)
+/book                   ✅ booking form — session dropdown (deep-linked via ?start_at=),
+                             editable first/last name (prefilled from profile), reason
+/me                     ✅ account page — identity + per-role bookings:
+  ├─ student            ✅   own consultations (reason/datetime/traveller/state),
+  │                            mark complete/incomplete, cancel, reschedule
+  ├─ traveller          ✅   own assigned sessions (read-only)
+  └─ admin/superadmin   ✅   oversight — consultations scoped by RLS
+                             (admin: their universities · superadmin: all), read-only
+  └─ profile edit       🔲   first/last name form (update_profile RPC already exists)
+/auth/login             ✅ email + password sign-in (+ one-click demo logins)
+/auth/sign-up           ✅ sign-up — captures first/last name + university, which the
+                             handle_new_user trigger turns into a profile + student role
+                             + enrolment
+/auth/sign-up-success   ✅ account-ready notice; email confirmation is OFF, so signup
+                             leaves the user logged in and the CTA continues any pending
+                             booking
+/auth/forgot-password   ✅ request a reset link
+/auth/update-password   ✅ set a new password
+/auth/confirm           ✅ email-confirmation / OTP callback (route handler)
+/auth/error             ✅ auth error page
+/protected              ⚙️ starter-kit sample (dumps JWT claims); superseded by /me
+```
+
+### API Route Handlers (mutations → RPC)
+
+Every write goes through a handler that calls one `SECURITY DEFINER` RPC — there
+is no direct table DML from the client.
+
+```
+POST   /api/auth/signup           ✅ -> auth.signUp (metadata drives the profile trigger)
+POST   /api/bookings/create       ✅ -> create_booking(starts_at, reason, first_name, last_name)
+POST   /api/bookings/cancel       ✅ -> cancel_booking(starts_at)
+POST   /api/bookings/reschedule   ✅ -> reschedule_booking(current_start, new_start)
+POST   /api/bookings/complete     ✅ -> set_booking_completion(booking_id, is_complete)
+       /api/profile               🔲 -> update_profile(first_name, last_name)  (RPC exists, no handler yet)
+```
+
+> Booking cancel/reschedule key off `starts_at` (the RPCs identify a booking by
+> student + slot), while completion keys off `booking_id`.
+
 ## Features
 
 - Works across the entire [Next.js](https://nextjs.org) stack
