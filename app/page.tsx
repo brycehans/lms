@@ -1,40 +1,14 @@
 import { Suspense } from "react";
 import { AuthButton } from "@/components/auth-button";
-import { createClient } from "@/lib/supabase/server";
 import { Footer } from "@/components/Footer";
 import { buttonVariants } from "@/components/ui/button";
-import { ProfileSummary } from "@/components/home/ProfileSummary";
-import { UpcomingBookings } from "@/components/home/UpcomingBookings";
 import { AvailabilityCalendar } from "@/components/home/AvailabilityCalendar";
 import { UniversitiesList } from "@/components/home/UniversitiesList";
 import { TravellerIndex } from "@/components/home/TravellerIndex";
 import { BrandMark } from "@/components/BrandMark";
 import { Starfield } from "@/components/home/Starfield";
 import { HowItWorks } from "@/components/HowItWorks";
-import { MoonStar, Sparkles, ArrowBigDown, User2Icon } from "lucide-react";
-
-/**
- * The identity + upcoming-bookings sections read auth cookies (uncached), so
- * they live behind their own Suspense boundary — with Cache Components on, a
- * top-level `await getClaims()` in the page would block the whole route.
- * Renders nothing for anonymous visitors.
- */
-async function AccountSections() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  const claims = data?.claims;
-  const userId = claims?.sub as string | undefined;
-  const email = claims?.email as string | undefined;
-
-  if (!userId) return null;
-
-  return (
-    <>
-      <ProfileSummary userId={userId} email={email} />
-      <UpcomingBookings userId={userId} />
-    </>
-  );
-}
+import { ArrowBigDown, User2Icon } from "lucide-react";
 
 export default function Home() {
   return (

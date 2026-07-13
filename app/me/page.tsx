@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { gravatarUrl } from "@/lib/gravatar";
+import { slugify } from "@/lib/utils";
 import { BrandMark } from "@/components/BrandMark";
 import { AuthButton } from "@/components/auth-button";
 import { Footer } from "@/components/Footer";
@@ -63,7 +63,10 @@ async function MeContent() {
       <header className="flex items-center gap-4">
         <Avatar
           name={fullName}
-          src={email ? gravatarUrl(email) : undefined}
+          // Travellers reuse their public roster portrait
+          // (/public/travellers/<slug>.webp); everyone else falls back to
+          // initials. Avatar degrades to initials if the portrait is absent.
+          src={isTraveller ? `/travellers/${slugify(fullName)}.webp` : undefined}
           className="size-16 text-lg"
         />
         <div className="min-w-0">
