@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDownUp, ListFilter } from "lucide-react";
+import { ArrowDownUp, Building2, ListFilter } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,11 +22,20 @@ export type BookingListItem = {
   id: string;
   startsAt: string;
   status: BookingStatus;
+  /**
+   * The booking's frozen university snapshot. Optional because not every caller
+   * has it (e.g. the traveller view doesn't fetch it). When present across ≥2
+   * distinct universities, the toolbar grows a university filter — handy for a
+   * transferred student with old + new bookings, or staff narrowing by tenant.
+   */
+  universityId?: string;
+  universityName?: string;
   /** The fully-rendered row (a `BookingCard`, with any role-specific actions). */
   card: ReactNode;
 };
 
 type StatusFilter = "all" | BookingStatus;
+type UniversityFilter = "all" | string;
 
 /**
  * Wraps a role's bookings with a client-side filter + sort toolbar. The rows
@@ -43,6 +52,8 @@ export function BookingList({
   emptyMessage: ReactNode;
 }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [universityFilter, setUniversityFilter] =
+    useState<UniversityFilter>("all");
   const [sort, setSort] = useState<SortMode>("lifecycle");
 
   // Which statuses are actually present, with counts, for the filter dropdown.
@@ -52,19 +63,39 @@ export function BookingList({
     return c;
   }, [items]);
 
+  // Distinct universities present (id → name + count), sorted by name so the
+  // dropdown order is stable. Items with no university snapshot are ignored.
+  const universities = useMemo(() => {
+    const m = new Map<string, { name: string; count: number }>();
+    for (const it of items) {
+      if (!it.universityId) continue;
+      const prev = m.get(it.universityId);
+      m.set(it.universityId, {
+        name: it.universityName ?? "Unknown university",
+        count: (prev?.count ?? 0) + 1,
+      });
+    }
+    return [...m.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
+  }, [items]);
+
   const visible = useMemo(() => {
-    const filtered =
-      statusFilter === "all"
-        ? items
-        : items.filter((it) => it.status === statusFilter);
+    const filtered = items.filter(
+      (it) =>
+        (statusFilter === "all" || it.status === statusFilter) &&
+        (universityFilter === "all" || it.universityId === universityFilter),
+    );
     return sortBookings(filtered, sort);
-  }, [items, statusFilter, sort]);
+  }, [items, statusFilter, universityFilter, sort]);
 
   if (items.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
   const presentStatuses = STATUS_ORDER.filter((s) => counts.has(s));
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setUniversityFilter("all");
+  };
 
   return (
     <div className="space-y-3">
@@ -88,6 +119,28 @@ export function BookingList({
             </SelectContent>
           </Select>
 
+          {universities.length > 1 && (
+            <Select
+              value={universityFilter}
+              onValueChange={(v) => setUniversityFilter(v as UniversityFilter)}
+            >
+              <SelectTrigger size="sm" className="min-w-[13rem]">
+                <Building2 />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  All universities ({items.length})
+                </SelectItem>
+                {universities.map(([id, { name, count }]) => (
+                  <SelectItem key={id} value={id}>
+                    {name} ({count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
             <SelectTrigger size="sm" className="min-w-[11rem]">
               <ArrowDownUp />
@@ -106,12 +159,13 @@ export function BookingList({
 
       {visible.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No {STATUS_LABEL[statusFilter as BookingStatus].toLowerCase()}{" "}
-          bookings.{" "}
+          {universityFilter === "all" && statusFilter !== "all"
+            ? `No ${STATUS_LABEL[statusFilter as BookingStatus].toLowerCase()} bookings.`
+            : "No bookings match these filters."}{" "}
           <button
             type="button"
             className="underline underline-offset-2 hover:text-foreground"
-            onClick={() => setStatusFilter("all")}
+            onClick={clearFilters}
           >
             Show all
           </button>

@@ -19,7 +19,7 @@ export async function StudentSection({ userId }: { userId: string }) {
   const { data: bookings } = await supabase
     .from("bookings")
     .select(
-      "id, starts_at, reason, time_traveller_id, cancelled_at, completed_at",
+      "id, starts_at, reason, time_traveller_id, university_id, cancelled_at, completed_at",
     )
     .eq("student_id", userId);
 
@@ -27,16 +27,32 @@ export async function StudentSection({ userId }: { userId: string }) {
 
   // The assigned traveller's name is visible via the counterparty profiles policy.
   const travellerIds = [...new Set(rows.map((b) => b.time_traveller_id))];
+  // University snapshots (readable via public_read_universities). A student is
+  // enrolled in one uni, but bookings freeze the uni at creation — so a
+  // transferred student can hold bookings across more than one, which is what
+  // powers the university filter in the list below.
+  const uniIds = [...new Set(rows.map((b) => b.university_id))];
+
+  const [{ data: travellers }, { data: unis }] = await Promise.all([
+    travellerIds.length
+      ? supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", travellerIds)
+      : Promise.resolve({
+          data: [] as { id: string; first_name: string; last_name: string }[],
+        }),
+    uniIds.length
+      ? supabase.from("universities").select("id, name").in("id", uniIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+
   const names = new Map<string, string>();
-  if (travellerIds.length > 0) {
-    const { data: travellers } = await supabase
-      .from("profiles")
-      .select("id, first_name, last_name")
-      .in("id", travellerIds);
-    for (const t of travellers ?? []) {
-      names.set(t.id, `${t.first_name} ${t.last_name}`);
-    }
+  for (const t of travellers ?? []) {
+    names.set(t.id, `${t.first_name} ${t.last_name}`);
   }
+  const uniNames = new Map<string, string>();
+  for (const u of unis ?? []) uniNames.set(u.id, u.name);
 
   // Ordering + filtering happen client-side in BookingList; pass rows as-is.
   const items: StudentBooking[] = rows.map((b) => ({
@@ -44,6 +60,8 @@ export async function StudentSection({ userId }: { userId: string }) {
     starts_at: b.starts_at,
     reason: b.reason,
     travellerName: names.get(b.time_traveller_id) ?? "your time traveller",
+    universityId: b.university_id,
+    universityName: uniNames.get(b.university_id),
     status: bookingStatus(b, now),
   }));
 

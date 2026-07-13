@@ -63,6 +63,8 @@ export async function OversightSection({
       id: b.id,
       startsAt: b.starts_at,
       status,
+      universityId: b.university_id,
+      universityName,
       card: (
         <BookingCard
           startsAt={b.starts_at}

@@ -59,6 +59,13 @@ const ACCOUNTS = [
       "Admins can see bookings scoped only to the university they administer (here, UTS).",
   },
   {
+    email: "nadia.fielding@example.com",
+    name: "Nadia Fielding",
+    role: "Admin · Melbourne",
+    blurb:
+      "Admin of University of Melbourne — sees Tim's pre-transfer bookings there but none of his UTS ones, the other side of the tenancy wall.",
+  },
+  {
     email: "bryce.hanscomb@example.com",
     name: "Bryce Hanscomb",
     role: "Superadmin",

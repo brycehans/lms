@@ -22,6 +22,8 @@ export type StudentBooking = {
   starts_at: string;
   reason: string;
   travellerName: string;
+  universityId?: string;
+  universityName?: string;
   status: BookingStatus;
 };
 
@@ -128,6 +130,8 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
       id: b.id,
       startsAt: b.starts_at,
       status: b.status,
+      universityId: b.universityId,
+      universityName: b.universityName,
       card: (
         <BookingCard
           startsAt={b.starts_at}
@@ -136,6 +140,7 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
             <>
               with time traveller{" "}
               <span className="text-foreground">{b.travellerName}</span>
+              {b.universityName ? ` · ${b.universityName}` : ""}
               <span className="mt-1 block truncate">{b.reason}</span>
             </>
           }

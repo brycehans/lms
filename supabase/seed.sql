@@ -33,6 +33,10 @@ values
   ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'tim.rollins@example.com', '{"provider":"email","providers":["email"]}', '{"first_name":"Tim","last_name":"Rollins"}', now(), now(), now()),
   ('44444444-4444-4444-4444-444444444444', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'kerry.davies@example.com', '{"provider":"email","providers":["email"]}', '{"first_name":"Kerry","last_name":"Davies"}', now(), now(), now()),
   ('55555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'bryce.hanscomb@example.com', '{"provider":"email","providers":["email"]}', '{"first_name":"Bryce","last_name":"Hanscomb"}', now(), now(), now()),
+  -- Nadia administers University of Melbourne — Tim's PREVIOUS uni. She exists so
+  -- the tenancy split is demoable from the other side: she sees Tim's old Melbourne
+  -- bookings but is blind to his UTS ones (the reverse of Kerry, the UTS admin).
+  ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'nadia.fielding@example.com', '{"provider":"email","providers":["email"]}', '{"first_name":"Nadia","last_name":"Fielding"}', now(), now(), now()),
   -- Six sample time travellers for the "Meet our time travellers" roster. Their
   -- slugified names (first-last, lowercased) map to /public/travellers/<slug>.webp.
   ('66666666-6666-6666-6666-666666666666', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'amara.okafor@example.com', '{"provider":"email","providers":["email"]}', '{"first_name":"Amara","last_name":"Okafor"}', now(), now(), now()),
@@ -99,6 +103,8 @@ values
   -- Tim
   ('44444444-4444-4444-4444-444444444444', 'admin'::user_role),
   -- Kerry
+  ('22222222-2222-2222-2222-222222222222', 'admin'::user_role),
+  -- Nadia
   ('55555555-5555-5555-5555-555555555555', 'superadmin'::user_role),
   -- Bryce
   -- Sample travellers. Amara and Marcus (the two youngest-looking) double as
@@ -142,9 +148,11 @@ insert into universities (id, name)
 -- Bryce (superadmin) deliberately gets NO row: superadmin is unscoped by
 -- definition, so the RBAC policy grants it every uni regardless of this table.
 insert into university_administrations (user_id, university_id)
-  values ('44444444-4444-4444-4444-444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+  values ('44444444-4444-4444-4444-444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  -- Kerry -> UTS
+  ('22222222-2222-2222-2222-222222222222', '10000000-0000-0000-0000-000000000001');
 
--- Kerry -> UTS
+-- Nadia -> University of Melbourne (Tim's old uni)
 --------------------------------------------------------------------------------
 -- Student enrolments (one uni per student). These MUST match the frozen
 -- university_id on each student's bookings below, so RPC-created bookings land
@@ -207,7 +215,18 @@ insert into bookings (student_id, time_traveller_id, reason, starts_at, cancelle
   -- Amara (UTS) + Kenji, completed: last Wed 10am, marked done an hour after it started
   ('66666666-6666-6666-6666-666666666666', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'prac for BIO150', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '2 days 10 hours') at time zone 'Australia/Melbourne', null, (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '2 days 11 hours') at time zone 'Australia/Melbourne', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Amara', 'Okafor'),
   -- Marcus (USyd, student) + Amara (traveller — dual role), completed: last Tue 11am, done an hour later
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '66666666-6666-6666-6666-666666666666', 'prac for Jazz 201', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '1 day 11 hours') at time zone 'Australia/Melbourne', null, (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '1 day 12 hours') at time zone 'Australia/Melbourne', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Marcus', 'Bell');
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '66666666-6666-6666-6666-666666666666', 'prac for Jazz 201', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '1 day 11 hours') at time zone 'Australia/Melbourne', null, (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '1 week' + interval '1 day 12 hours') at time zone 'Australia/Melbourne', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Marcus', 'Bell'),
+  -- Tim, TRANSFERRED student: he's enrolled at UTS now (all rows above), but these
+  -- older bookings are frozen to University of Melbourne — leftovers from before he
+  -- transferred. Two universities on one student's history is exactly what surfaces
+  -- the university filter on /me, and gives Nadia (the Melbourne admin) a real slice
+  -- to oversee. All in the past — he can't make NEW Melbourne bookings once enrolled
+  -- at UTS. Completed, two Weds ago 10am.
+  ('11111111-1111-1111-1111-111111111111', '77777777-7777-7777-7777-777777777777', 'exam for MAST10006 (booked before transferring to UTS)', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '2 weeks' + interval '2 days 10 hours') at time zone 'Australia/Melbourne', null, (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '2 weeks' + interval '2 days 11 hours') at time zone 'Australia/Melbourne', '10000000-0000-0000-0000-000000000001', 'Tim', 'Rollins'),
+  -- Tim (Melbourne, pre-transfer) + Rafael, completed: three Tuesdays ago 1pm
+  ('11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'midsem for ECON10004 (Melbourne, pre-transfer)', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '3 weeks' + interval '1 day 13 hours') at time zone 'Australia/Melbourne', null, (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '3 weeks' + interval '1 day 14 hours') at time zone 'Australia/Melbourne', '10000000-0000-0000-0000-000000000001', 'Tim', 'Rollins'),
+  -- Tim (Melbourne, pre-transfer) + Kenji, cancelled: was three Thursdays ago 2pm, cancelled ~22 days ago
+  ('11111111-1111-1111-1111-111111111111', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'lab final for CHEM10003 (Melbourne, pre-transfer)', (date_trunc('week', now() at time zone 'Australia/Melbourne') - interval '3 weeks' + interval '3 days 14 hours') at time zone 'Australia/Melbourne', now() - interval '22 days', null, '10000000-0000-0000-0000-000000000001', 'Tim', 'Rollins');
 
 --------------------------------------------------------------------------------
 -- Generative fill so the calendar isn't wall-to-wall "Open". A slot only reads
