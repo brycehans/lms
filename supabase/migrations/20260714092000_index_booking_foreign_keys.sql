@@ -1,0 +1,31 @@
+-- Index the bookings foreign keys that carry the account/oversight read paths.
+--
+-- Postgres does not auto-index foreign keys. The only existing bookings indexes
+-- (student_in_timeslot / traveller_in_timeslot, 20260712102006) are PARTIAL —
+-- `where deleted_at is null and cancelled_at is null` — so they serve only the
+-- active-slot concurrency checks (is_person_busy, reschedule target lookup,
+-- create/reschedule unique guards). They do NOT cover reads over a person's or a
+-- university's FULL history (including cancelled/completed rows), which is exactly
+-- what the /me pages do:
+--
+--   * StudentSection    — select … from bookings where student_id = $me
+--   * TravellerSection  — select … from bookings where time_traveller_id = $me
+--   * OversightSection  — RLS admins_read_scoped_bookings filters
+--                         university_id in (private.admin_university_ids())
+--
+-- These are equality filters on the FK columns, with ordering done client-side,
+-- so a plain single-column index on each FK matches the predicate exactly (a
+-- composite with starts_at would not help an unordered equality scan). Kept as
+-- full (non-partial) indexes precisely because these reads include cancelled and
+-- completed rows that the partial indexes exclude.
+--
+-- Superadmin oversight reads every row (no university filter), so no index helps
+-- that scan — that is inherent, not an index gap. Lifecycle columns
+-- (cancelled_at/completed_at/deleted_at) are only ever secondary predicates, so
+-- they are deliberately NOT indexed here (that would be speculative).
+--
+-- Plain CREATE INDEX (brief lock, negligible at this scale). For a large hosted
+-- table, prefer CREATE INDEX CONCURRENTLY run outside a migration transaction.
+create index if not exists idx_bookings_student_id on public.bookings (student_id);
+create index if not exists idx_bookings_time_traveller_id on public.bookings (time_traveller_id);
+create index if not exists idx_bookings_university_id on public.bookings (university_id);
