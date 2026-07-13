@@ -36,6 +36,37 @@ REDIRECT_ALLOW_LIST="${SITE_URL}/**,https://lms-zeta-lyart.vercel.app/**,https:/
 
 cd "$(dirname "$0")/.."
 
+# --- 0. Safety: the LINKED project must be the intended demo project -----------
+# The seed step below is DESTRUCTIVE — seed.sql opens with `delete from auth.users`
+# and wipes every booking/role/enrolment/university row. Both `db push` and
+# `db query` run against whatever project is currently `--linked`, which is NOT
+# necessarily PROJECT_REF above. Assert they match so a stray `supabase link` can
+# never point this script at the wrong project and wipe it. Then require an
+# explicit confirmation (skippable in automation via SETUP_ASSUME_YES=1).
+LINKED_REF="$(cat supabase/.temp/project-ref 2>/dev/null || true)"
+if [ -z "$LINKED_REF" ]; then
+  echo "ERROR: no linked project found (supabase/.temp/project-ref missing)." >&2
+  echo "       Run 'supabase link --project-ref ${PROJECT_REF}' first." >&2
+  exit 1
+fi
+if [ "$LINKED_REF" != "$PROJECT_REF" ]; then
+  echo "ERROR: the linked project ('${LINKED_REF}') is not the expected demo" >&2
+  echo "       project ('${PROJECT_REF}'). Refusing to run a destructive reseed" >&2
+  echo "       against the wrong project. Re-link or edit PROJECT_REF." >&2
+  exit 1
+fi
+
+echo "==> Target: project ${PROJECT_REF}  (${SITE_URL})"
+echo "    This DROPS AND RESEEDS all demo data (delete from auth.users, bookings, …)."
+if [ "${SETUP_ASSUME_YES:-}" != "1" ]; then
+  printf "    Type the project ref (%s) to continue: " "$PROJECT_REF"
+  read -r reply </dev/tty
+  if [ "$reply" != "$PROJECT_REF" ]; then
+    echo "    Aborted — input did not match the project ref." >&2
+    exit 1
+  fi
+fi
+
 # --- 1. Schema -----------------------------------------------------------------
 # Applies every migration not yet on the remote history table.
 echo "==> Pushing migrations"
