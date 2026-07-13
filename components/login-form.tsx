@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { QuickLogin } from "@/components/QuickLogin";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -56,12 +57,14 @@ export function LoginForm({
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Preferred entry for reviewers; self-hides unless demo logins are on. */}
+          <QuickLogin className="mb-6" />
           <form onSubmit={handleSubmit(onSubmit)}>
+            <p className="text-sm mb-4">
+              Enter your email below to login to your account
+            </p>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>

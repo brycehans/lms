@@ -1,15 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
+import { slugify } from "@/lib/utils";
 import { Avatar } from "./Avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
 import { SectionHeading } from "./SectionHeading";
 
 /**
- * The roster of time travellers. `user_roles` exposes traveller rows (the
- * `allow_authenticated_to_see_travellers` policy) and `profiles` exposes their
- * names (`authenticated_users_browse_travellers`) — but both are `to
- * authenticated`, so an anonymous visitor sees an empty roster. If you want
- * this public for brochureware, the two policies would need a `public` grant.
+ * The roster of time travellers. Public (brochureware): `user_roles` exposes
+ * traveller rows (the `allow_anyone_to_see_travellers` policy) and `profiles`
+ * exposes their names (`anyone_browses_travellers`) — both `to anon,
+ * authenticated`, and anon holds a column-scoped grant on just the id/name
+ * columns — so an anonymous visitor sees the full roster, ids + names only.
  */
 export async function TravellerIndex() {
   const supabase = await createClient();
@@ -42,14 +43,21 @@ export async function TravellerIndex() {
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {travellers.map((t) => {
             const name = `${t.first_name} ${t.last_name}`;
+            // Portraits live at /public/travellers/<slug>.webp, keyed by the
+            // slugified name; Avatar falls back to initials if the file is absent.
+            const src = `/travellers/${slugify(name)}.webp`;
             return (
               <li key={t.id}>
                 <Card>
-                  <CardContent className="flex items-center gap-3 p-4">
-                    <Avatar name={name} />
-                    <div className="min-w-0">
+                  <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
+                    <Avatar
+                      name={name}
+                      src={src}
+                      className="size-48 text-3xl"
+                    />
+                    <div className="w-full min-w-0">
                       <p className="truncate font-medium">{name}</p>
-                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
                         <Sparkles size={12} className="text-primary" />
                         Certified diviner
                       </p>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 function initials(name: string): string {
@@ -10,10 +13,10 @@ function initials(name: string): string {
 }
 
 /**
- * Round avatar. Renders `src` when given (e.g. a Gravatar URL); otherwise falls
- * back to the person's initials on a muted disc. Travellers have no readable
- * email (profiles stores no email, auth.users isn't exposed), so their tiles
- * use the initials fallback.
+ * Round avatar. Renders `src` when given (e.g. a portrait under
+ * /public/travellers); if that image is missing or fails to load, it falls back
+ * to the person's initials on a muted disc — so travellers without a portrait
+ * (and any 404) degrade gracefully rather than showing a broken image.
  */
 export function Avatar({
   name,
@@ -24,16 +27,25 @@ export function Avatar({
   src?: string;
   className?: string;
 }) {
+  const [failed, setFailed] = useState(false);
+
   const base = cn(
-    "shrink-0 rounded-full overflow-hidden bg-muted text-muted-foreground",
+    "shrink-0 rounded-lg overflow-hidden bg-muted text-muted-foreground",
     "flex items-center justify-center font-medium select-none",
     "size-12 text-sm",
     className,
   );
 
-  if (src) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={name} className={base} />;
+  if (src && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={name}
+        className={base}
+        onError={() => setFailed(true)}
+      />
+    );
   }
 
   return (
