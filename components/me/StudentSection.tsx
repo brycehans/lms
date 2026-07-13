@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { SectionHeading } from "@/components/home/SectionHeading";
 import { StudentBookings, type StudentBooking } from "./StudentBookings";
 import { bookingStatus } from "./booking-utils";
+import { loaded, SectionError } from "./section-query";
 
 /**
  * The student's own bookings. The bookings visibility wall (RLS) already scopes
@@ -16,14 +17,19 @@ export async function StudentSection({ userId }: { userId: string }) {
   const supabase = await createClient();
   const now = Date.now();
 
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select(
-      "id, starts_at, reason, time_traveller_id, university_id, cancelled_at, completed_at",
-    )
-    .eq("student_id", userId);
-
-  const rows = bookings ?? [];
+  const result = loaded(
+    await supabase
+      .from("bookings")
+      .select(
+        "id, starts_at, reason, time_traveller_id, university_id, cancelled_at, completed_at",
+      )
+      .eq("student_id", userId),
+    "student bookings",
+  );
+  if (!result.ok) {
+    return <SectionError icon={CalendarCheck} title="Your bookings" />;
+  }
+  const rows = result.rows;
 
   // The assigned traveller's name is visible via the counterparty profiles policy.
   const travellerIds = [...new Set(rows.map((b) => b.time_traveller_id))];

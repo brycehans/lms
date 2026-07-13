@@ -17,6 +17,7 @@ import { StudentSection } from "@/components/me/StudentSection";
 import { TravellerSection } from "@/components/me/TravellerSection";
 import { OversightSection } from "@/components/me/OversightSection";
 import { sortRoles, type AppRole } from "@/components/me/roles";
+import { loaded } from "@/components/me/section-query";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
@@ -40,7 +41,7 @@ async function MeContent() {
     redirect("/auth/login");
   }
 
-  const [{ data: profile }, { data: roleRows }] = await Promise.all([
+  const [{ data: profile }, roleRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("first_name, last_name")
@@ -50,7 +51,12 @@ async function MeContent() {
     supabase.from("user_roles").select("role").eq("user_id", userId),
   ]);
 
-  const roles = sortRoles((roleRows ?? []).map((r) => r.role as AppRole));
+  // A failed role read must NOT silently collapse to "no roles" — that would hide
+  // every section and look like an empty account. Distinguish it explicitly.
+  const rolesResult = loaded(roleRes, "user roles");
+  const roles = rolesResult.ok
+    ? sortRoles(rolesResult.rows.map((r) => r.role as AppRole))
+    : [];
   const firstName = profile?.first_name;
   const fullName = profile
     ? `${profile.first_name} ${profile.last_name}`
@@ -106,22 +112,34 @@ async function MeContent() {
         </section>
       )}
 
-      {isStudent && (
-        <Suspense fallback={<SectionSkeleton />}>
-          <StudentSection userId={userId} />
-        </Suspense>
-      )}
+      {!rolesResult.ok ? (
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-foreground"
+        >
+          We couldn&apos;t load your roles just now, so your bookings aren&apos;t
+          shown. Please refresh to try again.
+        </div>
+      ) : (
+        <>
+          {isStudent && (
+            <Suspense fallback={<SectionSkeleton />}>
+              <StudentSection userId={userId} />
+            </Suspense>
+          )}
 
-      {isTraveller && (
-        <Suspense fallback={<SectionSkeleton />}>
-          <TravellerSection userId={userId} />
-        </Suspense>
-      )}
+          {isTraveller && (
+            <Suspense fallback={<SectionSkeleton />}>
+              <TravellerSection userId={userId} />
+            </Suspense>
+          )}
 
-      {isStaff && (
-        <Suspense fallback={<SectionSkeleton />}>
-          <OversightSection isSuperadmin={isSuperadmin} />
-        </Suspense>
+          {isStaff && (
+            <Suspense fallback={<SectionSkeleton />}>
+              <OversightSection isSuperadmin={isSuperadmin} />
+            </Suspense>
+          )}
+        </>
       )}
     </div>
   );

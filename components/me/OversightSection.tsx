@@ -4,6 +4,7 @@ import { SectionHeading } from "@/components/home/SectionHeading";
 import { BookingCard } from "./BookingCard";
 import { BookingList } from "./BookingList";
 import { bookingStatus } from "./booking-utils";
+import { loaded, SectionError } from "./section-query";
 
 /**
  * The oversight list for staff. We deliberately do NOT filter by university
@@ -19,14 +20,20 @@ export async function OversightSection({
 }) {
   const supabase = await createClient();
   const now = Date.now();
+  const title = isSuperadmin ? "All bookings" : "Bookings at your universities";
 
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select(
-      "id, starts_at, reason, time_traveller_id, student_first_name, student_last_name, university_id, cancelled_at, completed_at, deleted_at",
-    );
-
-  const rows = bookings ?? [];
+  const result = loaded(
+    await supabase
+      .from("bookings")
+      .select(
+        "id, starts_at, reason, time_traveller_id, student_first_name, student_last_name, university_id, cancelled_at, completed_at, deleted_at",
+      ),
+    isSuperadmin ? "superadmin oversight" : "admin oversight",
+  );
+  if (!result.ok) {
+    return <SectionError icon={ShieldCheck} title={title} />;
+  }
+  const rows = result.rows;
 
   // Traveller names (traveller profiles are publicly readable) + university names.
   const travellerIds = [...new Set(rows.map((b) => b.time_traveller_id))];
@@ -82,8 +89,6 @@ export async function OversightSection({
       ),
     };
   });
-
-  const title = isSuperadmin ? "All bookings" : "Bookings at your universities";
 
   return (
     <section className="space-y-4">

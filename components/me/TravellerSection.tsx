@@ -4,6 +4,7 @@ import { SectionHeading } from "@/components/home/SectionHeading";
 import { BookingCard } from "./BookingCard";
 import { BookingList } from "./BookingList";
 import { bookingStatus } from "./booking-utils";
+import { loaded, SectionError } from "./section-query";
 
 /**
  * The sessions assigned to a traveller. Read-only: travellers don't schedule,
@@ -14,14 +15,19 @@ export async function TravellerSection({ userId }: { userId: string }) {
   const supabase = await createClient();
   const now = Date.now();
 
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select(
-      "id, starts_at, reason, student_first_name, student_last_name, university_id, cancelled_at, completed_at",
-    )
-    .eq("time_traveller_id", userId);
-
-  const rows = bookings ?? [];
+  const result = loaded(
+    await supabase
+      .from("bookings")
+      .select(
+        "id, starts_at, reason, student_first_name, student_last_name, university_id, cancelled_at, completed_at",
+      )
+      .eq("time_traveller_id", userId),
+    "traveller sessions",
+  );
+  if (!result.ok) {
+    return <SectionError icon={Telescope} title="Sessions assigned to you" />;
+  }
+  const rows = result.rows;
 
   // University snapshots (readable via public_read_universities). A traveller
   // serves students across universities, so their assigned sessions can span
