@@ -88,8 +88,20 @@ for (const [k, v] of Object.entries(derived)) {
 
 console.log(`[dev] app → Supabase at ${explicit.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL}`);
 
-// 4. Hand off to next dev (which does its own port fallback if 3000 is taken).
-const next = spawn("pnpm", ["exec", "next", "dev", ...process.argv.slice(2)], {
+// 4. Hand off to next dev on a FIXED, uncommon port (1955). We deliberately
+// forgo Next's default port fallback: the app's URL is baked into the auth
+// redirect allow-list in supabase/config.toml (site_url / additional_redirect_urls),
+// so a moved port would silently desync those. A fixed uncommon port is unlikely
+// to clash on a fresh machine; if it does, override with `pnpm dev -p <port>` or
+// PORT=<port> (and update config.toml to match if you rely on auth redirects).
+const APP_PORT = "1955";
+const passthrough = process.argv.slice(2);
+const hasPortFlag = passthrough.some(
+  (a) => a === "-p" || a === "--port" || a.startsWith("--port="),
+);
+const portArgs = hasPortFlag || process.env.PORT ? [] : ["-p", APP_PORT];
+
+const next = spawn("pnpm", ["exec", "next", "dev", ...portArgs, ...passthrough], {
   stdio: "inherit",
   env: process.env,
 });
