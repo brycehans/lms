@@ -43,8 +43,8 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/protected");
+      // Land on the user's own account page — their bookings + role context.
+      router.push("/me");
     } catch (error: unknown) {
       setError("root", {
         message: error instanceof Error ? error.message : "An error occurred",

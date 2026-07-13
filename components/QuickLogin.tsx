@@ -76,19 +76,27 @@ export function QuickLogin({ className }: { className?: string }) {
   const login = async (email: string) => {
     setBusy(email);
     setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: DEMO_PASSWORD,
-    });
-    if (error) {
-      setError(error.message);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: DEMO_PASSWORD,
+      });
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      // Refresh so server components re-read the freshly-set auth cookie.
+      router.push("/me");
+      router.refresh();
+    } finally {
+      // Always clear `busy` — including on the success path. We navigate to /me,
+      // but Next's client router cache keeps this just-visited login segment's
+      // React tree (state and all); logging out later restores it, so a `busy`
+      // left set here would come back stuck on "Signing in…". Clearing in
+      // `finally` guarantees the restored tree is idle.
       setBusy(null);
-      return;
     }
-    // Refresh so server components re-read the freshly-set auth cookie.
-    router.push("/");
-    router.refresh();
   };
 
   return (

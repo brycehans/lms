@@ -6,6 +6,16 @@ const packageScripts = new Set(['dev', 'build', 'start', 'lint', 'typecheck'])
 
 export default definePolicy([
   {
+    name: 'Allow next-devtools MCP',
+    description:
+      'Permits all tool calls from the next-devtools MCP server (browser_eval, nextjs_call, nextjs_docs, nextjs_index)',
+    action: 'allow',
+    handler: async (call) => {
+      if (call.tool.startsWith('mcp__next-devtools__')) return true
+      return
+    },
+  },
+  {
     name: 'Allow package.json scripts',
     description:
       'Permits running the scripts declared in package.json via pnpm/npm/yarn, optionally piped through safe filters',
