@@ -32,6 +32,20 @@ export function safeNext(next: string | null | undefined): string {
   return next;
 }
 
+/**
+ * A11y attributes tying a form control to its <FieldError>. When the field is
+ * invalid we mark the control `aria-invalid` (which the Input/Textarea/Select
+ * primitives style with a destructive border) and point screen readers at the
+ * message via `aria-describedby`. `errorId` must match the id passed to the
+ * matching <FieldError>. Spread onto the control: `{...errorAttrs(!!errors.x, "x-error")}`.
+ */
+export function errorAttrs(hasError: boolean, errorId: string) {
+  return {
+    "aria-invalid": hasError || undefined,
+    "aria-describedby": hasError ? errorId : undefined,
+  } as const;
+}
+
 // This check can be removed, it is just for tutorial purposes
 export const hasEnvVars =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&

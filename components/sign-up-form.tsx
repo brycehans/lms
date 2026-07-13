@@ -1,7 +1,9 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, errorAttrs } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field-error";
+import { FormMessage } from "@/components/ui/form-message";
 import {
   Card,
   CardContent,
@@ -107,8 +109,12 @@ export function SignUpForm({
                   id="email"
                   type="email"
                   placeholder="m@example.com"
-                  {...register("email", { required: true })}
+                  {...errorAttrs(!!errors.email, "email-error")}
+                  {...register("email", { required: "Email is required." })}
                 />
+                <FieldError id="email-error">
+                  {errors.email?.message}
+                </FieldError>
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
@@ -117,8 +123,14 @@ export function SignUpForm({
                 <Input
                   id="password"
                   type="password"
-                  {...register("password", { required: true })}
+                  {...errorAttrs(!!errors.password, "password-error")}
+                  {...register("password", {
+                    required: "Password is required.",
+                  })}
                 />
+                <FieldError id="password-error">
+                  {errors.password?.message}
+                </FieldError>
               </div>
 
               <div className="grid gap-2">
@@ -128,18 +140,17 @@ export function SignUpForm({
                 <Input
                   id="repeat-password"
                   type="password"
+                  {...errorAttrs(!!errors.repeatPassword, "repeat-password-error")}
                   {...register("repeatPassword", {
-                    required: true,
+                    required: "Please confirm your password.",
                     validate: (value) =>
                       value === getValues("password") ||
                       "Passwords do not match",
                   })}
                 />
-                {errors.repeatPassword && (
-                  <p className="text-sm text-red-500">
-                    {errors.repeatPassword.message}
-                  </p>
-                )}
+                <FieldError id="repeat-password-error">
+                  {errors.repeatPassword?.message}
+                </FieldError>
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
@@ -148,8 +159,14 @@ export function SignUpForm({
                 <Input
                   id="first-name"
                   type="text"
-                  {...register("firstName", { required: true })}
+                  {...errorAttrs(!!errors.firstName, "first-name-error")}
+                  {...register("firstName", {
+                    required: "First name is required.",
+                  })}
                 />
+                <FieldError id="first-name-error">
+                  {errors.firstName?.message}
+                </FieldError>
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
@@ -158,8 +175,14 @@ export function SignUpForm({
                 <Input
                   id="last-name"
                   type="text"
-                  {...register("lastName", { required: true })}
+                  {...errorAttrs(!!errors.lastName, "last-name-error")}
+                  {...register("lastName", {
+                    required: "Last name is required.",
+                  })}
                 />
+                <FieldError id="last-name-error">
+                  {errors.lastName?.message}
+                </FieldError>
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
@@ -168,10 +191,17 @@ export function SignUpForm({
                 <Controller
                   name="universityId"
                   control={control}
-                  rules={{ required: true }}
+                  rules={{ required: "Please select your university." }}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="university" className="w-full">
+                      <SelectTrigger
+                        id="university"
+                        className="w-full"
+                        {...errorAttrs(
+                          !!errors.universityId,
+                          "university-error",
+                        )}
+                      >
                         <SelectValue placeholder="Select your university" />
                       </SelectTrigger>
                       <SelectContent>
@@ -184,15 +214,16 @@ export function SignUpForm({
                     </Select>
                   )}
                 />
+                <FieldError id="university-error">
+                  {errors.universityId?.message}
+                </FieldError>
                 <p className="text-xs text-muted-foreground">
                   Why do I have to specify my uni? Administrators are
                   per-university, so this lets us demonstrate the app&apos;s
                   tenancy model.
                 </p>
               </div>
-              {errors.root && (
-                <p className="text-sm text-red-500">{errors.root.message}</p>
-              )}
+              <FormMessage>{errors.root?.message}</FormMessage>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Creating an account..." : "Sign up"}
               </Button>

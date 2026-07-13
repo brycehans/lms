@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn, slugify } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
 import { Avatar } from "@/components/home/Avatar";
 
 /**
@@ -149,7 +150,7 @@ export function QuickLogin({
             </p>
           </div>
         ))}
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        <FormMessage>{error}</FormMessage>
       </div>
 
       {/* divider into the manual email/password form below */}

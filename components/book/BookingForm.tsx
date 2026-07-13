@@ -22,7 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { FieldError } from "@/components/ui/field-error";
+import { FormMessage } from "@/components/ui/form-message";
+import { errorAttrs } from "@/lib/utils";
 import { formatSlot } from "@/components/me/booking-utils";
 
 const DAY_MS = 86_400_000;
@@ -158,7 +161,11 @@ export function BookingForm({
               rules={{ required: "Please pick a session time." }}
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="startsAt" className="w-full">
+                  <SelectTrigger
+                    id="startsAt"
+                    className="w-full"
+                    {...errorAttrs(!!errors.startsAt, "startsAt-error")}
+                  >
                     <SelectValue
                       placeholder={
                         slotsStatus === "loading"
@@ -188,11 +195,9 @@ export function BookingForm({
                 No open slots in the next {BOOKING_WINDOW_DAYS} days.
               </p>
             )}
-            {errors.startsAt && (
-              <p className="text-sm text-destructive">
-                {errors.startsAt.message}
-              </p>
-            )}
+            <FieldError id="startsAt-error">
+              {errors.startsAt?.message}
+            </FieldError>
           </div>
 
           {/* Name snapshot — prefilled from the profile, editable per booking */}
@@ -205,30 +210,28 @@ export function BookingForm({
               <Input
                 id="firstName"
                 type="text"
+                {...errorAttrs(!!errors.firstName, "firstName-error")}
                 {...register("firstName", {
                   required: "First name is required.",
                 })}
               />
-              {errors.firstName && (
-                <p className="text-sm text-destructive">
-                  {errors.firstName.message}
-                </p>
-              )}
+              <FieldError id="firstName-error">
+                {errors.firstName?.message}
+              </FieldError>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="lastName">Last name</Label>
               <Input
                 id="lastName"
                 type="text"
+                {...errorAttrs(!!errors.lastName, "lastName-error")}
                 {...register("lastName", {
                   required: "Last name is required.",
                 })}
               />
-              {errors.lastName && (
-                <p className="text-sm text-destructive">
-                  {errors.lastName.message}
-                </p>
-              )}
+              <FieldError id="lastName-error">
+                {errors.lastName?.message}
+              </FieldError>
             </div>
             <p className="text-xs text-muted-foreground sm:col-span-2">
               We snapshot these onto the booking as it stands now — editing them
@@ -239,27 +242,21 @@ export function BookingForm({
           {/* Reason */}
           <div className="grid gap-2">
             <Label htmlFor="reason">What would you like prophesied?</Label>
-            <textarea
+            <Textarea
               id="reason"
               rows={3}
               placeholder="e.g. my final grade for Intro to Chronology"
-              className={cn(
-                "flex min-h-[72px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-              )}
+              {...errorAttrs(!!errors.reason, "reason-error")}
               {...register("reason", {
                 required: "Please tell us what to prophesy.",
               })}
             />
-            {errors.reason && (
-              <p className="text-sm text-destructive">
-                {errors.reason.message}
-              </p>
-            )}
+            <FieldError id="reason-error">
+              {errors.reason?.message}
+            </FieldError>
           </div>
 
-          {errors.root && (
-            <p className="text-sm text-destructive">{errors.root.message}</p>
-          )}
+          <FormMessage>{errors.root?.message}</FormMessage>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Booking…" : "Confirm booking"}

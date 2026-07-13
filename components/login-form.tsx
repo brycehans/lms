@@ -1,9 +1,11 @@
 "use client";
 
-import { cn, safeNext } from "@/lib/utils";
+import { cn, errorAttrs, safeNext } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { QuickLogin } from "@/components/QuickLogin";
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field-error";
+import { FormMessage } from "@/components/ui/form-message";
 import {
   Card,
   CardContent,
@@ -76,8 +78,12 @@ export function LoginForm({
                   id="email"
                   type="email"
                   placeholder="m@example.com"
-                  {...register("email", { required: true })}
+                  {...errorAttrs(!!errors.email, "email-error")}
+                  {...register("email", { required: "Email is required." })}
                 />
+                <FieldError id="email-error">
+                  {errors.email?.message}
+                </FieldError>
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
@@ -92,12 +98,16 @@ export function LoginForm({
                 <Input
                   id="password"
                   type="password"
-                  {...register("password", { required: true })}
+                  {...errorAttrs(!!errors.password, "password-error")}
+                  {...register("password", {
+                    required: "Password is required.",
+                  })}
                 />
+                <FieldError id="password-error">
+                  {errors.password?.message}
+                </FieldError>
               </div>
-              {errors.root && (
-                <p className="text-sm text-red-500">{errors.root.message}</p>
-              )}
+              <FormMessage>{errors.root?.message}</FormMessage>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Logging in..." : "Login"}
               </Button>

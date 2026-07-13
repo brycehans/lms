@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarSync, Check, Undo2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
 import {
   Select,
   SelectContent,
@@ -267,9 +268,7 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
                   {/* Reschedule failure shows here, next to the picker, so the
                         student can immediately pick another slot. Other actions'
                         errors surface at the bottom of the list. */}
-                  {error && (
-                    <p className="w-full text-sm text-destructive">{error}</p>
-                  )}
+                  <FormMessage className="w-full">{error}</FormMessage>
                 </div>
               )}
             </div>
@@ -287,12 +286,8 @@ export function StudentBookings({ items }: { items: StudentBooking[] }) {
       />
       {/* When a reschedule panel is open its own error renders inline (above);
           this covers the instant cancel/complete actions instead. */}
-      {!openId && error && <p className="text-sm text-destructive">{error}</p>}
-      {success && (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">
-          {success}
-        </p>
-      )}
+      {!openId && <FormMessage>{error}</FormMessage>}
+      <FormMessage variant="success">{success}</FormMessage>
     </div>
   );
 }
