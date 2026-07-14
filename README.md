@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/brycehans/lms/actions/workflows/ci.yml/badge.svg)](https://github.com/brycehans/lms/actions/workflows/ci.yml)
 
+![The Course Prophecies landing page: hero and the weekly availability calendar](./docs/images/landing-page.png)
+
 **Course Prophecies** is a
 mini-LMS with a twist: instead of tutors, students book one-hour consultations
 with **certified time travellers** who go into the future to find out your grade
@@ -44,6 +46,9 @@ local Supabase (Postgres 17) in Docker — and yes, the dev server runs on port
 
 - **Admins** watch over the consultations at the universities they administer;
   **superadmins** see every timeline. Both views are read-only and scoped by RLS.
+  (The brief's Admin — a single role that sees every consultation across the
+  entire system — is the **superadmin** here; the university-scoped admin is an
+  extra tier showing how roles compose with tenancy.)
 
   ![An admin's account page: bookings across the universities they administer, read-only](./docs/images/admin-me.png)
 
@@ -234,6 +239,12 @@ conversation. Each is marked with a `TRADEOFF OPPORTUNITY` comment in the source
 
 ## Known limitations (by design, for this take-home)
 
+- **Completion is past-only (an assumption).** The brief's "mark consultations
+  complete/incomplete" is read as applying to sessions that have already
+  happened: `set_booking_completion` rejects future bookings (`starts_at >
+  now()`) and cancelled ones — a prophecy can't be marked fulfilled before the
+  consultation occurs. The UI accordingly only offers the toggle on past,
+  non-cancelled bookings.
 - **Hardcoded business timezone.** `Australia/Melbourne` is baked into the
   `business_hours` domain. Runtime slot logic is timezone-safe (routed through
   `private.business_tz()`), but the domain type still assumes a whole-hour UTC
