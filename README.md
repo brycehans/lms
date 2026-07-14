@@ -279,10 +279,6 @@ conversation. Each is marked with a `TRADEOFF OPPORTUNITY` comment in the source
   available on the free Vercel plan — so the demo rolls its own site-wide HTTP
   Basic Auth gate in `proxy.ts` instead.
 
-These last ones map to findings #6–#10 and #12 in
-`docs/codebase-review-2026-07-13.md`; the verified triage and what was fixed are
-in `docs/codebase-review-2026-07-13-response.md`.
-
 ## Deploy
 
 Local Supabase (`127.0.0.1:54321`) is unreachable from a hosted deploy. See
